@@ -7,6 +7,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.camera import Camera
 from kivy.uix.button import Button
+from kivy.setupconfig import USE_SDL2
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image as kiImage
@@ -14,7 +15,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.image import Image as CoreImage
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
-
+from kivy import platform
 
 import cv2
 import numpy
@@ -270,7 +271,36 @@ class AddWindow(Screen):
 
         popup.open()
 
-    def show_QR_code(self, item_data, *args):
+    def save_QR_code(self, *args):
+        self.QR_code_core_image.save(f"./{self.inventory_number_entry.text}.png")
+
+    def share_QR_code(self, *args):
+        print("Have to be tested on Androind device")
+
+        if platform == 'android':
+            from jnius import cast
+            from jnius import autoclass
+            if USE_SDL2:
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            else:
+                PythonActivity = autoclass('org.renpy.android.PythonActivity')
+            Intent = autoclass('android.content.Intent')
+            String = autoclass('java.lang.String')
+            Uri = autoclass('android.net.Uri')
+            File = autoclass('java.io.File')
+
+            shareIntent = Intent(Intent.ACTION_SEND)
+            shareIntent.setType('"image/*"')
+            imageFile = self.QR_code_core_image
+            uri = Uri.fromFile(imageFile)
+
+            parcelable = cast('android.os.Parcelable', uri)
+            shareIntent.putExtra(Intent.EXTRA_STREAM, parcelable)
+
+            currentActivity = cast('android.app.Activity', PythonActivity.mActivity)
+            currentActivity.startActivity(shareIntent)
+
+    def show_QR_code(self, *args):
 
         item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
         data_to_encode = item_name_entry + "$" + faculty_entry + "$" + department_entry + "$" + inventory_number_entry + "$" + responsible_entry + "$" + date_accepted_entry + "$" + room_entry
@@ -284,6 +314,7 @@ class AddWindow(Screen):
         QR_code_pillow_image.save(data, format='png')
         data.seek(0) # yes you actually need this
         image = CoreImage(BytesIO(data.read()), ext='png')
+        self.QR_code_core_image = image
         self.QR_code_image = kiImage() # only use this line in first code instance
         self.QR_code_image.texture = image.texture
 
@@ -294,8 +325,8 @@ class AddWindow(Screen):
         self.title = Label(text="Получен QR код для оборудования")
 
         self.close_button = Button(text='Закрыть')
-        self.save_button = Button(text='Сохранить')
-        self.export_button = Button(text='Экспортировать')
+        self.save_button = Button(text='Сохранить'); self.save_button.bind(on_press = self.save_QR_code)
+        self.export_button = Button(text='Экспортировать'); self.export_button.bind(on_press = self.share_QR_code)
 
         self.footer_layout.add_widget(self.close_button)
         self.footer_layout.add_widget(self.save_button)
@@ -445,3 +476,5 @@ class Application(App):
 if __name__ == "__main__":
     application = Application()
     application.run()
+
+# ["Наименование", "Факультет", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"]
