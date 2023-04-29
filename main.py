@@ -1,3 +1,4 @@
+import re
 import os
 from kivy.app import App
 from kivy.clock import Clock
@@ -8,14 +9,35 @@ from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.image import Image as kiImage
 from kivy.uix.floatlayout import FloatLayout
+from kivy.core.image import Image as CoreImage
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
 
+
 import cv2
 import numpy
+import qrcode
 import pandas as pd
-from PIL import Image
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+
+
+class IntegerInput(TextInput):
+
+    pat = re.compile('[^0-9]')
+    def insert_text(self, substring, from_undo=False):
+        pat = self.pat
+        if '.' in self.text:
+            s = re.sub(pat, '', substring)
+        else:
+            s = '.'.join(
+                re.sub(pat, '', s)
+                for s in substring.split('.', 1)
+            )
+        return super().insert_text(s, from_undo=from_undo)
+
 
 
 Builder.load_string("""
@@ -173,6 +195,124 @@ class AboutWindow(Screen):
         self.manager.current = to_where
 
 
+class AddWindow(Screen):
+
+    def __init__(self, **kwargs):
+        super(AddWindow, self).__init__(**kwargs)
+
+        self.title = Label(text="Введите данные оборудования.")
+
+        self.header_layout = BoxLayout(orientation='horizontal')
+        self.main_layout = BoxLayout(orientation="vertical")
+
+        self.back_button = Button(text='Назад')
+        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+        self.about_button = Button(text='Инструкция')
+        self.about_button.bind(on_press = self.call_about_page)
+
+        self.label_entiry_pair_layout1 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout2 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout3 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout4 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout5 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout6 = BoxLayout(orientation='horizontal')
+        self.label_entiry_pair_layout7 = BoxLayout(orientation='horizontal')
+
+        self.item_name_label = Label(text="Наименование оборудования"); self.item_name_entry = TextInput()
+        self.faculty_label = Label(text="Факультет");                   self.faculty_entry = TextInput()
+        self.department_label = Label(text="Кафедра");                  self.department_entry = TextInput()
+        self.inventory_number_label = Label(text="Инвентарный номер");  self.inventory_number_entry = IntegerInput()
+        self.responsible_label = Label(text="Ответственный");           self.responsible_entry = TextInput()
+        self.date_accepted_label = Label(text="Дата принятия");         self.date_accepted_entry = TextInput()
+        self.room_label = Label(text="Кабинет");                        self.room_entry = IntegerInput()
+
+
+        self.generate_button = Button(text='Сгенерировать QR код')
+        self.generate_button.bind(on_press = self.show_QR_code)
+
+        self.label_entiry_pair_layout1.add_widget(self.item_name_label); self.label_entiry_pair_layout1.add_widget(self.item_name_entry);
+        self.label_entiry_pair_layout2.add_widget(self.faculty_label); self.label_entiry_pair_layout2.add_widget(self.faculty_entry);
+        self.label_entiry_pair_layout3.add_widget(self.department_label); self.label_entiry_pair_layout3.add_widget(self.department_entry);
+        self.label_entiry_pair_layout4.add_widget(self.inventory_number_label); self.label_entiry_pair_layout4.add_widget(self.inventory_number_entry);
+        self.label_entiry_pair_layout5.add_widget(self.responsible_label); self.label_entiry_pair_layout5.add_widget(self.responsible_entry);
+        self.label_entiry_pair_layout6.add_widget(self.date_accepted_label); self.label_entiry_pair_layout6.add_widget(self.date_accepted_entry);
+        self.label_entiry_pair_layout7.add_widget(self.room_label); self.label_entiry_pair_layout7.add_widget(self.room_entry);
+
+        self.header_layout.add_widget(self.back_button)
+        self.header_layout.add_widget(self.about_button)
+
+        self.main_layout.add_widget(self.header_layout)
+        self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.label_entiry_pair_layout1); self.main_layout.add_widget(self.label_entiry_pair_layout2);
+        self.main_layout.add_widget(self.label_entiry_pair_layout3); self.main_layout.add_widget(self.label_entiry_pair_layout4);
+        self.main_layout.add_widget(self.label_entiry_pair_layout5); self.main_layout.add_widget(self.label_entiry_pair_layout6);
+        self.main_layout.add_widget(self.label_entiry_pair_layout7);
+        self.main_layout.add_widget(self.generate_button)
+
+
+        self.add_widget(self.main_layout)
+
+
+    def call_about_page(self, *args, **kwargs):
+        popup_main_layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Как пользоваться данной программой.")
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.") #!!! Text wrapping issue !!!
+
+        self.close_button = Button(text='Закрыть')
+
+        popup_main_layout.add_widget(self.title)
+        popup_main_layout.add_widget(self.body)
+        popup_main_layout.add_widget(self.close_button)
+
+        popup = Popup(title='Как пользоваться данной программой', content=popup_main_layout, auto_dismiss=False)
+        self.close_button.bind(on_press = popup.dismiss)
+
+        popup.open()
+
+    def show_QR_code(self, item_data, *args):
+
+        item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
+        data_to_encode = item_name_entry + "$" + faculty_entry + "$" + department_entry + "$" + inventory_number_entry + "$" + responsible_entry + "$" + date_accepted_entry + "$" + room_entry
+
+        qr = qrcode.QRCode(version = 1, box_size = 10, border = 5)
+        qr.add_data(data_to_encode)
+        qr.make(fit = True)
+        QR_code_pillow_image = qr.make_image(fill_color = 'black', back_color = 'white')
+
+        data = BytesIO()
+        QR_code_pillow_image.save(data, format='png')
+        data.seek(0) # yes you actually need this
+        image = CoreImage(BytesIO(data.read()), ext='png')
+        self.QR_code_image = kiImage() # only use this line in first code instance
+        self.QR_code_image.texture = image.texture
+
+
+        self.popup_main_layout = BoxLayout(orientation='vertical')
+        self.footer_layout = BoxLayout(orientation='horizontal')
+
+        self.title = Label(text="Получен QR код для оборудования")
+
+        self.close_button = Button(text='Закрыть')
+        self.save_button = Button(text='Сохранить')
+        self.export_button = Button(text='Экспортировать')
+
+        self.footer_layout.add_widget(self.close_button)
+        self.footer_layout.add_widget(self.save_button)
+        self.footer_layout.add_widget(self.export_button)
+
+        self.popup_main_layout.add_widget(self.title)
+        self.popup_main_layout.add_widget(self.QR_code_image)
+        self.popup_main_layout.add_widget(self.footer_layout)
+
+        popup = Popup(title='Ваш QR код', content=self.popup_main_layout, auto_dismiss=False)
+        self.close_button.bind(on_press = popup.dismiss)
+
+        popup.open()
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
+
 
 class MainWindow(Screen):
 
@@ -296,6 +436,7 @@ class Application(App):
         sm.add_widget(StartUpWindow(name='home page'))
         sm.add_widget(ChooseWindow(name='choose page'))
         sm.add_widget(MainWindow(name='main page'))
+        sm.add_widget(AddWindow(name='add page'))
         sm.add_widget(ScanWindow(name='test scan page'))
         sm.add_widget(AboutWindow(name='about page'))
         return sm
