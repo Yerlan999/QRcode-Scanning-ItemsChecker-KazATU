@@ -35,9 +35,7 @@ import numpy
 import qrcode
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
-
-
-COLUMNS_NAME = ["Наименование", "Факультет", "Кафедра", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"]
+# xlwt in needed for this version of pandas !!!
 
 class IntegerInput(TextInput):
 
@@ -183,7 +181,6 @@ class ScanWindow(Screen):
         self.manager.current = to_where
 
 
-
 class AddWindow(Screen):
 
     def __init__(self, app, *args, **kwargs):
@@ -215,7 +212,6 @@ class AddWindow(Screen):
         self.responsible_label = Label(text="Ответственный", halign="center");           self.responsible_entry = TextInput()
         self.date_accepted_label = Label(text="Дата принятия", halign="center");         self.date_accepted_entry = TextInput()
         self.room_label = Label(text="Кабинет", halign="center");                        self.room_entry = IntegerInput()
-
 
         self.generate_button = Button(text='Сгенерировать QR код')
         self.generate_button.bind(on_press = self.show_QR_code)
@@ -308,7 +304,6 @@ class AddWindow(Screen):
         self.QR_code_image = kiImage()
         self.QR_code_image.texture = image.texture
 
-
         self.popup_main_layout = BoxLayout(orientation='vertical')
         self.footer_layout = BoxLayout(orientation='horizontal')
 
@@ -353,23 +348,25 @@ class ListWindow(Screen):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
-        table_content = [[row["Наименование"], row["Факультет"], row["Кафедра"], row["Инвентарный номер"], row["Ответственный"], row["Дата принятия"], row["Кабинет"]] for index, row in self.app.excel_df.iterrows()]
+        self.table_content = []
+        for index, row in self.app.excel_df.iterrows():
+            row_content = []
+            for column_name in list(self.app.excel_df.columns):
+                row_content.append(row[column_name])
+            self.table_content.append(row_content)
+
+        self.column_headers = []
+        for column_name in list(self.app.excel_df.columns):
+            self.column_headers.append((column_name, dp(30)))
 
         self.data_tables = MDDataTable(
             use_pagination=True,
-            check=True,
+            check=False,
 
-            column_data=[
-                ("Наименование оборудования", dp(30), None, "Custom tooltip"),
-                ("Факультет", dp(30)),
-                ("Кафедра", dp(60)),
-                ("Инвентарный номер", dp(30)),
-                ("Ответственный", dp(30)),
-                ("Дата принятия", dp(30),),
-                ("Кабинет", dp(30)),
-            ],
-            row_data = table_content,
+            column_data= self.column_headers,
+            row_data = self.table_content,
         )
+
         self.table_layout.add_widget(self.data_tables)
 
         self.main_layout.add_widget(self.title)
@@ -384,6 +381,194 @@ class ListWindow(Screen):
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
 
+
+
+class CheckWindow(Screen):
+
+    def __init__(self, app, **kwargs):
+        super(CheckWindow, self).__init__(**kwargs)
+        self.app = app
+
+        self.main_layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Инвентаризация оборудовании", halign='center', size_hint=(1.0, 0.1))
+
+        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
+        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.add_widget(self.main_layout)
+
+    def on_enter(self, *args, **kwargs):
+        self.table_layout = AnchorLayout()
+
+        self.table_content = []
+        for index, row in self.app.excel_df.iterrows():
+            row_content = []
+            for column_name in list(self.app.excel_df.columns):
+                row_content.append(row[column_name])
+            self.table_content.append(row_content)
+
+        self.column_headers = []
+        for column_name in list(self.app.excel_df.columns):
+            self.column_headers.append((column_name, dp(30)))
+
+        self.data_tables = MDDataTable(
+            use_pagination=True,
+            check=True,
+
+            column_data= self.column_headers,
+            row_data = self.table_content,
+        )
+
+        self.table_layout.add_widget(self.data_tables)
+
+        self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.table_layout)
+        self.main_layout.add_widget(self.back_button)
+
+    def on_leave(self, *args, **kwargs):
+        self.main_layout.remove_widget(self.title)
+        self.main_layout.remove_widget(self.back_button)
+        self.main_layout.remove_widget(self.table_layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
+
+
+class DeleteWindow(Screen):
+
+    def __init__(self, app, **kwargs):
+        super(DeleteWindow, self).__init__(**kwargs)
+        self.app = app
+
+        self.main_layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Удаление оборудовании", halign='center', size_hint=(1.0, 0.1))
+
+        self.back_button = Button(text='Назад')
+        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.delete_button = Button(text='Удалить')
+        self.delete_button.bind(on_press = self.delete_checked_rows)
+
+        self.add_widget(self.main_layout)
+
+    def on_enter(self, *args, **kwargs):
+        self.rows_to_delete = []
+
+        self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
+        self.table_layout = AnchorLayout()
+
+        self.table_content = []
+        for index, row in self.app.excel_df.iterrows():
+            row_content = []
+            for column_name in list(self.app.excel_df.columns):
+                row_content.append(row[column_name])
+            self.table_content.append(row_content)
+
+        self.column_headers = []
+        for column_name in list(self.app.excel_df.columns):
+            self.column_headers.append((column_name, dp(30)))
+
+        self.data_tables = MDDataTable(
+            use_pagination=True,
+            check=True,
+
+            column_data= self.column_headers,
+            row_data = self.table_content,
+        )
+
+        self.table_layout.add_widget(self.data_tables)
+        self.buttons_layout.add_widget(self.back_button)
+        self.buttons_layout.add_widget(self.delete_button)
+        self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.table_layout)
+        self.main_layout.add_widget(self.buttons_layout)
+
+
+    def delete_checked_rows(self, *args):
+        print()
+        print("================================================ INVOKE DELETE ROW =================================================")
+        def deselect_rows(*args):
+            self.data_tables.table_data.select_all("normal")
+
+        row_index = None
+        for data in self.data_tables.get_row_checks():
+            print(data)
+            counter = 0
+            for row in self.data_tables.row_data:
+                if str(row[3]) == str(data[3]):
+                    row_index = counter
+                counter += 1
+
+            self.data_tables.remove_row(self.data_tables.row_data[row_index])
+            self.app.excel_df = self.app.excel_df.drop(self.app.excel_df.index[self.app.excel_df[self.column_headers[3][0]] == int(data[3])].tolist()[0])
+        self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
+        Clock.schedule_once(deselect_rows)
+        print()
+
+
+    def on_leave(self, *args, **kwargs):
+        self.buttons_layout.remove_widget(self.back_button)
+        self.buttons_layout.remove_widget(self.delete_button)
+        self.main_layout.remove_widget(self.title)
+        self.main_layout.remove_widget(self.table_layout)
+        self.main_layout.remove_widget(self.buttons_layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
+
+
+class UpdateWindow(Screen):
+
+    def __init__(self, app, **kwargs):
+        super(UpdateWindow, self).__init__(**kwargs)
+        self.app = app
+
+        self.main_layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Перемещение/Обновление оборудовании", halign='center', size_hint=(1.0, 0.1))
+
+        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
+        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.add_widget(self.main_layout)
+
+    def on_enter(self, *args, **kwargs):
+        self.table_layout = AnchorLayout()
+
+        self.table_content = []
+        for index, row in self.app.excel_df.iterrows():
+            row_content = []
+            for column_name in list(self.app.excel_df.columns):
+                row_content.append(row[column_name])
+            self.table_content.append(row_content)
+
+        self.column_headers = []
+        for column_name in list(self.app.excel_df.columns):
+            self.column_headers.append((column_name, dp(30)))
+
+        self.data_tables = MDDataTable(
+            use_pagination=True,
+            check=False,
+
+            column_data= self.column_headers,
+            row_data = self.table_content,
+        )
+
+        self.table_layout.add_widget(self.data_tables)
+
+        self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.table_layout)
+        self.main_layout.add_widget(self.back_button)
+
+    def on_leave(self, *args, **kwargs):
+        self.main_layout.remove_widget(self.title)
+        self.main_layout.remove_widget(self.back_button)
+        self.main_layout.remove_widget(self.table_layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
 
 
 class MainWindow(Screen):
@@ -404,13 +589,13 @@ class MainWindow(Screen):
         self.add_button.bind(on_press = partial(self.screen_transition, "add page"))
 
         self.update_button = Button(text='Переместить/Обновить оборудование')
-        self.update_button.bind(on_press = partial(self.screen_transition, "list page"))
+        self.update_button.bind(on_press = partial(self.screen_transition, "update page"))
 
         self.check_button = Button(text='Провести инвентаризацию')
-        self.check_button.bind(on_press = partial(self.screen_transition, "list page"))
+        self.check_button.bind(on_press = partial(self.screen_transition, "check page"))
 
         self.delete_button = Button(text='Удалить оборудование')
-        self.delete_button.bind(on_press = partial(self.screen_transition, "list page"))
+        self.delete_button.bind(on_press = partial(self.screen_transition, "delete page"))
 
         self.look_up_button = Button(text='Просмотр списка оборудовании')
         self.look_up_button.bind(on_press = partial(self.screen_transition, "list page"))
@@ -541,6 +726,9 @@ class Application(MDApp):
         sm.add_widget(MainWindow(name='main page'))
         sm.add_widget(AddWindow(self, name='add page'))
         sm.add_widget(ListWindow(self, name='list page'))
+        sm.add_widget(DeleteWindow(self, name='delete page'))
+        sm.add_widget(UpdateWindow(self, name='update page'))
+        sm.add_widget(CheckWindow(self, name='check page'))
         sm.add_widget(ScanWindow(name='test scan page'))
         sm.add_widget(AboutWindow(name='about page'))
         return sm
@@ -550,4 +738,3 @@ if __name__ == "__main__":
     application = Application()
     application.run()
 
-# ["Наименование", "Факультет", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"]
