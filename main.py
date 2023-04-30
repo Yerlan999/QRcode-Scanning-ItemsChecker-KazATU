@@ -1,10 +1,14 @@
 import re
 import os
+from io import BytesIO
 from kivy.app import App
+from kivy.metrics import dp
+from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
-from kivy.uix.label import Label
+# from kivy.uix.label import Label
+from kivymd.uix.label import MDLabel as Label
 from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.setupconfig import USE_SDL2
@@ -12,8 +16,14 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image as kiImage
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.behaviors import FocusBehavior
+from kivy.uix.recycleview import RecycleView
 from kivy.core.image import Image as CoreImage
+from kivy.uix.recycleboxlayout import RecycleBoxLayout
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.properties import BooleanProperty, StringProperty, NumericProperty, OptionProperty
 from functools import partial
 from kivy import platform
 
@@ -21,9 +31,10 @@ import cv2
 import numpy
 import qrcode
 import pandas as pd
-from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
+from kivymd.uix.datatables import MDDataTable
+from kivy.uix.anchorlayout import AnchorLayout
 
 class IntegerInput(TextInput):
 
@@ -55,23 +66,18 @@ Builder.load_string("""
 
 class FileChooserWidget(BoxLayout):
 
-    def __init__(self, parent_screen, *args, **kwargs):
+    def __init__(self, parent_screen, app, *args, **kwargs):
         super(FileChooserWidget, self).__init__(*args, **kwargs)
         self.parent_screen = parent_screen
+        self.app = app
 
     def open(self, path, filename):
-        # Check if selected file .xlsx file and open with pandas
-
-        file_name, file_extension = os.path.splitext(filename[0])
-        if (file_extension in [".xlsx", ".xls"]):
+        if (filename) and os.path.splitext(filename[0])[1] in [".xlsx", ".xls"]:
             excel_df = pd.read_excel(filename[0])
             self.excel_df = excel_df
-            print(excel_df)
-        print()
-
-        # Read selected file and save it
-        # After reading and saving, transit to the the "main page"
-        self.parent_screen.screen_transition("main page")
+            setattr(self.app, "excel_df", excel_df)
+            setattr(self.app, "excel_df_path", filename[0])
+            self.parent_screen.screen_transition("main page")
 
 
     def selected(self, filename):
@@ -80,18 +86,18 @@ class FileChooserWidget(BoxLayout):
 
 class ChooseWindow(Screen):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, app, *args, **kwargs):
         super(ChooseWindow, self).__init__(*args, **kwargs)
 
         layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Укажите путь к excel файлу с оборудованием")
+        self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center')
 
         self.home_button = Button(text='Домой')
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
-        layout.add_widget(FileChooserWidget(self))
+        layout.add_widget(FileChooserWidget(self, app))
         layout.add_widget(self.home_button)
 
 
@@ -125,7 +131,7 @@ class ScanWindow(Screen):
         self.camera_object = Camera(play=True)
         self.camera_object.resolution = (600, 600)
 
-        self.data = Label(text="")
+        self.data = Label(text="", halign="center", valign = "middle",)
 
         self.home_button = Button(text='Назад')
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
@@ -164,44 +170,22 @@ class ScanWindow(Screen):
         image = self.camera_frame_to_image(self.camera_object)
         qr_code_value = self.read_QR_code(image)
         if qr_code_value:
+            item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("$")
+            qr_code_value = "Наим. оборуд.: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
             self.data.text = qr_code_value
-        # self.camera_object.export_to_png('./selfie.png')
 
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
 
-
-
-class AboutWindow(Screen):
-
-    def __init__(self, **kwargs):
-        super(AboutWindow, self).__init__(**kwargs)
-
-        layout = BoxLayout(orientation='vertical')
-
-        self.title = Label(text="Как пользоваться данной программой.")
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.") #!!! Text wrapping issue !!!
-
-        self.home_button = Button(text='Домой')
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
-
-        layout.add_widget(self.title)
-        layout.add_widget(self.body)
-        layout.add_widget(self.home_button)
-
-
-        self.add_widget(layout)
-
-    def screen_transition(self, to_where, *args):
-        self.manager.current = to_where
 
 
 class AddWindow(Screen):
 
-    def __init__(self, **kwargs):
-        super(AddWindow, self).__init__(**kwargs)
+    def __init__(self, app, *args, **kwargs):
+        super(AddWindow, self).__init__(*args, **kwargs)
+        self.app = app
 
-        self.title = Label(text="Введите данные оборудования.")
+        self.title = Label(text="Введите данные оборудования.", halign='center')
 
         self.header_layout = BoxLayout(orientation='horizontal')
         self.main_layout = BoxLayout(orientation="vertical")
@@ -258,7 +242,7 @@ class AddWindow(Screen):
         popup_main_layout = BoxLayout(orientation='vertical')
 
         self.title = Label(text="Как пользоваться данной программой.")
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.") #!!! Text wrapping issue !!!
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.")
 
         self.close_button = Button(text='Закрыть')
 
@@ -266,17 +250,18 @@ class AddWindow(Screen):
         popup_main_layout.add_widget(self.body)
         popup_main_layout.add_widget(self.close_button)
 
-        popup = Popup(title='Как пользоваться данной программой', content=popup_main_layout, auto_dismiss=False)
+        popup = Popup(title='Инструкция', content=popup_main_layout, auto_dismiss=False)
         self.close_button.bind(on_press = popup.dismiss)
 
         popup.open()
 
     def save_QR_code(self, *args):
-        self.QR_code_core_image.save(f"./{self.inventory_number_entry.text}.png")
+        if not os.path.isdir(os.path.join(self.app.user_data_dir, "QR коды")):
+            os.mkdir(os.path.join(self.app.user_data_dir, "QR коды"))
+        qr_code_image_name = os.path.join(os.path.join(self.app.user_data_dir, "QR коды"), f"{self.inventory_number_entry.text}.png")
+        self.QR_code_core_image.save(qr_code_image_name)
 
     def share_QR_code(self, *args):
-        print("Have to be tested on Androind device")
-
         if platform == 'android':
             from jnius import cast
             from jnius import autoclass
@@ -303,7 +288,7 @@ class AddWindow(Screen):
     def show_QR_code(self, *args):
 
         item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
-        data_to_encode = item_name_entry + "$" + faculty_entry + "$" + department_entry + "$" + inventory_number_entry + "$" + responsible_entry + "$" + date_accepted_entry + "$" + room_entry
+        data_to_encode = item_name_entry + "_" + faculty_entry + "_" + department_entry + "_" + inventory_number_entry + "_" + responsible_entry + "_" + date_accepted_entry + "_" + room_entry
 
         qr = qrcode.QRCode(version = 1, box_size = 10, border = 5)
         qr.add_data(data_to_encode)
@@ -312,10 +297,10 @@ class AddWindow(Screen):
 
         data = BytesIO()
         QR_code_pillow_image.save(data, format='png')
-        data.seek(0) # yes you actually need this
+        data.seek(0)
         image = CoreImage(BytesIO(data.read()), ext='png')
         self.QR_code_core_image = image
-        self.QR_code_image = kiImage() # only use this line in first code instance
+        self.QR_code_image = kiImage()
         self.QR_code_image.texture = image.texture
 
 
@@ -343,6 +328,54 @@ class AddWindow(Screen):
 
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
+
+
+class ListWindow(Screen):
+
+    def __init__(self, app, **kwargs):
+        super(ListWindow, self).__init__(**kwargs)
+        self.app = app
+
+        self.main_layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Список оборудовании.", halign='center')
+
+        self.back_button = Button(text='Назад')
+        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.add_widget(self.main_layout)
+
+    def on_enter(self, *args, **kwargs):
+        self.table_layout = AnchorLayout()
+
+        self.data_tables = MDDataTable(
+            use_pagination=True,
+            check=True,
+            # name column, width column, sorting function column(optional), custom tooltip
+            column_data=[
+                ("No.", dp(30), None, "Custom tooltip"),
+                ("Status", dp(30)),
+                ("Signal Name", dp(60)),
+                ("Severity", dp(30)),
+                ("Stage", dp(30)),
+                ("Schedule", dp(30), lambda *args: print("Sorted using Schedule")),
+                ("Team Lead", dp(30)),
+            ],
+        )
+        self.table_layout.add_widget(self.data_tables)
+
+        self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.table_layout)
+        self.main_layout.add_widget(self.back_button)
+
+    def on_leave(self, *args, **kwargs):
+        self.main_layout.remove_widget(self.title)
+        self.main_layout.remove_widget(self.back_button)
+        self.main_layout.remove_widget(self.table_layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
+
 
 
 class MainWindow(Screen):
@@ -401,7 +434,7 @@ class MainWindow(Screen):
         popup_main_layout = BoxLayout(orientation='vertical')
 
         self.title = Label(text="Как пользоваться данной программой.")
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.") #!!! Text wrapping issue !!!
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.")
 
         self.close_button = Button(text='Закрыть')
 
@@ -409,7 +442,7 @@ class MainWindow(Screen):
         popup_main_layout.add_widget(self.body)
         popup_main_layout.add_widget(self.close_button)
 
-        popup = Popup(title='Как пользоваться данной программой', content=popup_main_layout, auto_dismiss=False)
+        popup = Popup(title='Инструкция', content=popup_main_layout, auto_dismiss=False)
         self.close_button.bind(on_press = popup.dismiss)
 
         popup.open()
@@ -426,8 +459,8 @@ class StartUpWindow(Screen):
             primary_layout = BoxLayout(orientation='vertical')
             secondary_layout = BoxLayout(orientation='horizontal')
 
-            self.title = Label(text="Помощник лаборанта")
-            self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново")
+            self.title = Label(text="Помощник лаборанта", halign='center')
+            self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново", halign='center')
 
             self.choose_button = Button(text='Выбрать')
             self.choose_button.bind(on_press = partial(self.screen_transition, "choose page"))
@@ -461,13 +494,46 @@ class StartUpWindow(Screen):
             self.manager.current = to_where
 
 
-class Application(App):
+class AboutWindow(Screen):
+
+    def __init__(self, **kwargs):
+        super(AboutWindow, self).__init__(**kwargs)
+
+        layout = BoxLayout(orientation='vertical')
+
+        self.title = Label(text="Как пользоваться данной программой.", halign='center')
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign='center')
+
+        self.home_button = Button(text='Домой')
+        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+
+        layout.add_widget(self.title)
+        layout.add_widget(self.body)
+        layout.add_widget(self.home_button)
+
+
+        self.add_widget(layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
+
+
+class Application(MDApp):
+
+    def __init__(self, *args, **kwargs):
+        super(Application, self).__init__(*args, **kwargs)
+        self.excel_df = None
+        self.excel_df_path = None
+
     def build(self):
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "Orange"
         sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(StartUpWindow(name='home page'))
-        sm.add_widget(ChooseWindow(name='choose page'))
+        sm.add_widget(ChooseWindow(self, name='choose page'))
         sm.add_widget(MainWindow(name='main page'))
-        sm.add_widget(AddWindow(name='add page'))
+        sm.add_widget(AddWindow(self, name='add page'))
+        sm.add_widget(ListWindow(self, name='list page'))
         sm.add_widget(ScanWindow(name='test scan page'))
         sm.add_widget(AboutWindow(name='about page'))
         return sm
