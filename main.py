@@ -1,14 +1,14 @@
-import re
 import os
+import re
 from io import BytesIO
 from kivy.app import App
+from kivy import platform
 from kivy.metrics import dp
 from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
 # from kivy.uix.label import Label
-from kivymd.uix.label import MDLabel as Label
 from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.setupconfig import USE_SDL2
@@ -18,6 +18,7 @@ from kivy.uix.image import Image as kiImage
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.recycleview import RecycleView
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.core.image import Image as CoreImage
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
@@ -25,7 +26,9 @@ from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.properties import BooleanProperty, StringProperty, NumericProperty, OptionProperty
 from functools import partial
-from kivy import platform
+
+from kivymd.uix.label import MDLabel as Label
+from kivymd.uix.datatables import MDDataTable
 
 import cv2
 import numpy
@@ -33,8 +36,8 @@ import qrcode
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
-from kivymd.uix.datatables import MDDataTable
-from kivy.uix.anchorlayout import AnchorLayout
+
+COLUMNS_NAME = ["Наименование", "Факультет", "Кафедра", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"]
 
 class IntegerInput(TextInput):
 
@@ -58,6 +61,8 @@ Builder.load_string("""
     Button
         text: "Выбрать"
         on_release: file_chooser.open(filechooser.path, filechooser.selection)
+        size_hint: 1.0, 0.1
+        pos_hint: {'right': 1, 'top': 1}
     FileChooserListView:
         id: filechooser
         on_selection: file_chooser.selected(filechooser.selection)
@@ -91,9 +96,9 @@ class ChooseWindow(Screen):
 
         layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center')
+        self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center', size_hint=(1.0, 0.1))
 
-        self.home_button = Button(text='Домой')
+        self.home_button = Button(text='Домой', size_hint=(1.0, 0.1))
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
@@ -120,7 +125,7 @@ class ScanWindow(Screen):
 
         self.layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Подведите камеру к QR коду для прочтения данных.")
+        self.title = Label(text="Подведите камеру к QR коду для прочтения данных.", halign='center', size_hint=(1.0, 0.1))
 
         self.layout.add_widget(self.title)
 
@@ -131,9 +136,9 @@ class ScanWindow(Screen):
         self.camera_object = Camera(play=True)
         self.camera_object.resolution = (600, 600)
 
-        self.data = Label(text="", halign="center", valign = "middle",)
+        self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
 
-        self.home_button = Button(text='Назад')
+        self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         self.layout.add_widget(self.camera_object)
@@ -171,7 +176,7 @@ class ScanWindow(Screen):
         qr_code_value = self.read_QR_code(image)
         if qr_code_value:
             item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("$")
-            qr_code_value = "Наим. оборуд.: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
+            qr_code_value = "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
             self.data.text = qr_code_value
 
     def screen_transition(self, to_where, *args):
@@ -203,13 +208,13 @@ class AddWindow(Screen):
         self.label_entiry_pair_layout6 = BoxLayout(orientation='horizontal')
         self.label_entiry_pair_layout7 = BoxLayout(orientation='horizontal')
 
-        self.item_name_label = Label(text="Наименование оборудования"); self.item_name_entry = TextInput()
-        self.faculty_label = Label(text="Факультет");                   self.faculty_entry = TextInput()
-        self.department_label = Label(text="Кафедра");                  self.department_entry = TextInput()
-        self.inventory_number_label = Label(text="Инвентарный номер");  self.inventory_number_entry = IntegerInput()
-        self.responsible_label = Label(text="Ответственный");           self.responsible_entry = TextInput()
-        self.date_accepted_label = Label(text="Дата принятия");         self.date_accepted_entry = TextInput()
-        self.room_label = Label(text="Кабинет");                        self.room_entry = IntegerInput()
+        self.item_name_label = Label(text="Наименование оборудования", halign="center"); self.item_name_entry = TextInput()
+        self.faculty_label = Label(text="Факультет", halign="center");                   self.faculty_entry = TextInput()
+        self.department_label = Label(text="Кафедра", halign="center");                  self.department_entry = TextInput()
+        self.inventory_number_label = Label(text="Инвентарный номер", halign="center");  self.inventory_number_entry = IntegerInput()
+        self.responsible_label = Label(text="Ответственный", halign="center");           self.responsible_entry = TextInput()
+        self.date_accepted_label = Label(text="Дата принятия", halign="center");         self.date_accepted_entry = TextInput()
+        self.room_label = Label(text="Кабинет", halign="center");                        self.room_entry = IntegerInput()
 
 
         self.generate_button = Button(text='Сгенерировать QR код')
@@ -241,8 +246,8 @@ class AddWindow(Screen):
     def call_about_page(self, *args, **kwargs):
         popup_main_layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Как пользоваться данной программой.")
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.")
+        self.title = Label(text="Как пользоваться данной программой.", halign="center")
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign="center")
 
         self.close_button = Button(text='Закрыть')
 
@@ -307,7 +312,7 @@ class AddWindow(Screen):
         self.popup_main_layout = BoxLayout(orientation='vertical')
         self.footer_layout = BoxLayout(orientation='horizontal')
 
-        self.title = Label(text="Получен QR код для оборудования")
+        self.title = Label(text="Получен QR код для оборудования", halign="center")
 
         self.close_button = Button(text='Закрыть')
         self.save_button = Button(text='Сохранить'); self.save_button.bind(on_press = self.save_QR_code)
@@ -338,9 +343,9 @@ class ListWindow(Screen):
 
         self.main_layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Список оборудовании.", halign='center')
+        self.title = Label(text="Список оборудовании.", halign='center', size_hint=(1.0, 0.1))
 
-        self.back_button = Button(text='Назад')
+        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
         self.add_widget(self.main_layout)
@@ -348,19 +353,22 @@ class ListWindow(Screen):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
+        table_content = [[row["Наименование"], row["Факультет"], row["Кафедра"], row["Инвентарный номер"], row["Ответственный"], row["Дата принятия"], row["Кабинет"]] for index, row in self.app.excel_df.iterrows()]
+
         self.data_tables = MDDataTable(
             use_pagination=True,
             check=True,
-            # name column, width column, sorting function column(optional), custom tooltip
+
             column_data=[
-                ("No.", dp(30), None, "Custom tooltip"),
-                ("Status", dp(30)),
-                ("Signal Name", dp(60)),
-                ("Severity", dp(30)),
-                ("Stage", dp(30)),
-                ("Schedule", dp(30), lambda *args: print("Sorted using Schedule")),
-                ("Team Lead", dp(30)),
+                ("Наименование оборудования", dp(30), None, "Custom tooltip"),
+                ("Факультет", dp(30)),
+                ("Кафедра", dp(60)),
+                ("Инвентарный номер", dp(30)),
+                ("Ответственный", dp(30)),
+                ("Дата принятия", dp(30),),
+                ("Кабинет", dp(30)),
             ],
+            row_data = table_content,
         )
         self.table_layout.add_widget(self.data_tables)
 
@@ -383,9 +391,9 @@ class MainWindow(Screen):
     def __init__(self, **kwargs):
         super(MainWindow, self).__init__(**kwargs)
 
-        self.header_layout = BoxLayout(orientation='horizontal')
-        self.footer_layout = BoxLayout(orientation='horizontal')
-        self.main_layout = BoxLayout(orientation='vertical')
+        self.header_layout = BoxLayout(orientation='horizontal', spacing=10)
+        self.footer_layout = BoxLayout(orientation='horizontal', spacing=10)
+        self.main_layout = BoxLayout(orientation='vertical', spacing=20, padding=30)
 
         self.home_button = Button(text='Домой')
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
@@ -433,8 +441,8 @@ class MainWindow(Screen):
     def call_about_page(self, *args, **kwargs):
         popup_main_layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Как пользоваться данной программой.")
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.")
+        self.title = Label(text="Как пользоваться данной программой.", halign="center")
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign="center")
 
         self.close_button = Button(text='Закрыть')
 
@@ -456,8 +464,8 @@ class StartUpWindow(Screen):
         def __init__(self, **kwargs):
             super(StartUpWindow, self).__init__(**kwargs)
 
-            primary_layout = BoxLayout(orientation='vertical')
-            secondary_layout = BoxLayout(orientation='horizontal')
+            primary_layout = BoxLayout(orientation='vertical', spacing=20, padding=30)
+            secondary_layout = BoxLayout(orientation='horizontal', spacing=10)
 
             self.title = Label(text="Помощник лаборанта", halign='center')
             self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново", halign='center')
@@ -501,10 +509,9 @@ class AboutWindow(Screen):
 
         layout = BoxLayout(orientation='vertical')
 
-        self.title = Label(text="Как пользоваться данной программой.", halign='center')
-        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign='center')
-
-        self.home_button = Button(text='Домой')
+        self.title = Label(text="Как пользоваться данной программой.", halign='center', size_hint=(1.0, 0.1))
+        self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign='center', size_hint=(1.0, 0.8))
+        self.home_button = Button(text='Домой', size_hint=(1.0, 0.1))
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
@@ -527,7 +534,7 @@ class Application(MDApp):
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
-        self.theme_cls.primary_palette = "Orange"
+
         sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(StartUpWindow(name='home page'))
         sm.add_widget(ChooseWindow(self, name='choose page'))
