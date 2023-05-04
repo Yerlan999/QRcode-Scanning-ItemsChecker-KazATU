@@ -77,9 +77,10 @@ class FileChooserWidget(BoxLayout):
     def open(self, path, filename):
         if (filename) and os.path.splitext(filename[0])[1] in [".xlsx", ".xls"]:
             excel_df = pd.read_excel(filename[0])
-            self.excel_df = excel_df
-            setattr(self.app, "excel_df", excel_df)
-            setattr(self.app, "excel_df_path", filename[0])
+            # self.excel_df = excel_df
+            self.app.excel_choosen = True
+            self.app.excel_df = excel_df
+            self.app.excel_df_path = filename[0]
             self.parent_screen.screen_transition("main page")
 
 
@@ -118,8 +119,9 @@ class ScreenManagement(ScreenManager):
 
 class ScanWindow(Screen):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, app, *args, **kwargs):
         super(ScanWindow, self).__init__(*args, **kwargs)
+        self.app = app
 
         self.layout = BoxLayout(orientation='vertical')
 
@@ -134,10 +136,19 @@ class ScanWindow(Screen):
         self.camera_object = Camera(play=True)
         self.camera_object.resolution = (600, 600)
 
-        self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
+        if self.app.scan_with_delete:
+            self.title.text = "Подведите камеру к QR коду для удаления оборудования."
+            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button.bind(on_press = partial(self.screen_transition, "main page"))
+        elif self.app.scan_with_update:
+            self.title.text = "Подведите камеру к QR коду для обновления оборудования."
+            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button.bind(on_press = partial(self.screen_transition, "main page"))
+        else:
+            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
-        self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+        self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.data)
@@ -151,6 +162,7 @@ class ScanWindow(Screen):
         self.layout.remove_widget(self.camera_object)
         self.layout.remove_widget(self.home_button)
         self.layout.remove_widget(self.data)
+        self.title.text = "Подведите камеру к QR коду для прочтения данных"
         self.scan_clock.cancel()
 
     def read_QR_code(self, image, *args, **kwargs):
@@ -172,9 +184,26 @@ class ScanWindow(Screen):
     def scan_for_QR_code(self, *args):
         image = self.camera_frame_to_image(self.camera_object)
         qr_code_value = self.read_QR_code(image)
-        if qr_code_value:
-            item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("$")
-            qr_code_value = "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
+        if qr_code_value and len(qr_code_value.split("_")) > 1:
+            item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("_")
+            self.app.current_item_QR = qr_code_value.split("_")
+
+            indexes_found = None
+            if (self.app.excel_choosen or self.app.excel_created) and self.app.excel_df_path:
+                indexes_found = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == int(inventory_number_entry)].tolist()
+
+            if self.app.scan_with_delete and indexes_found:
+                self.app.excel_df = self.app.excel_df.drop(indexes_found)
+                self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
+                self.app.scan_with_delete = False
+                self.screen_transition("delete page")
+            elif self.app.scan_with_update and indexes_found:
+                self.screen_transition("add page")
+
+            if (self.app.scan_with_update or self.app.scan_with_delete) and not indexes_found:
+                qr_code_value = "Данного оборудования нет в excel файле!\n\n" + "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
+            else:
+                qr_code_value = "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
             self.data.text = qr_code_value
 
     def screen_transition(self, to_where, *args):
@@ -238,6 +267,31 @@ class AddWindow(Screen):
 
         self.add_widget(self.main_layout)
 
+    def on_enter(self, *args, **kwargs):
+        self.item_name_entry.text = ""
+        self.faculty_entry.text = ""
+        self.department_entry.text = ""
+        self.inventory_number_entry.text = ""
+        self.responsible_entry.text = ""
+        self.date_accepted_entry.text = ""
+        self.room_entry.text = ""
+
+        if self.app.scan_with_update and self.app.current_item_QR:
+            self.title.text = "Обновите данные для оборудования"
+            indexes_found = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == int(self.app.current_item_QR[3])].tolist()
+            if indexes_found:
+                item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = self.app.excel_df.loc[indexes_found[0],:]
+
+                self.item_name_entry.text = item_name_entry
+                self.faculty_entry.text = faculty_entry
+                self.department_entry.text = department_entry
+                self.inventory_number_entry.text = str(inventory_number_entry)
+                self.responsible_entry.text = responsible_entry
+                self.date_accepted_entry.text = date_accepted_entry
+                self.room_entry.text = str(room_entry)
+
+                self.generate_button.text = "Обновить и сгенерировать QR код"
+
 
     def call_about_page(self, *args, **kwargs):
         popup_main_layout = BoxLayout(orientation='vertical')
@@ -257,10 +311,31 @@ class AddWindow(Screen):
         popup.open()
 
     def save_QR_code(self, *args):
+
+        provided = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
+        if not all(provided):
+            return
+
+        self.app.excel_df = pd.read_excel(self.app.excel_df_path)
         if not os.path.isdir(os.path.join(self.app.user_data_dir, "QR коды")):
             os.mkdir(os.path.join(self.app.user_data_dir, "QR коды"))
+
         qr_code_image_name = os.path.join(os.path.join(self.app.user_data_dir, "QR коды"), f"{self.inventory_number_entry.text}.png")
         self.QR_code_core_image.save(qr_code_image_name)
+
+        found_indexes = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == int(self.inventory_number_entry.text)].tolist()
+
+        if found_indexes:
+            self.app.excel_df.loc[found_indexes,:] = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
+        else:
+            self.app.excel_df.loc[len(self.app.excel_df),:] = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
+        self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
+
+        if self.app.scan_with_update:
+            self.app.scan_with_update = False
+            self.screen_transition("update page")
+            return
+        self.screen_transition("main page")
 
     def share_QR_code(self, *args):
         if platform == 'android':
@@ -445,6 +520,9 @@ class DeleteWindow(Screen):
 
         self.title = Label(text="Удаление оборудовании", halign='center', size_hint=(1.0, 0.1))
 
+        self.delete_by_QR_button = Button(text='Удалить по QR коду', size_hint=(1.0, 0.1))
+        self.delete_by_QR_button.bind(on_press = self.delete_by_QR_code)
+
         self.back_button = Button(text='Назад')
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
@@ -482,19 +560,17 @@ class DeleteWindow(Screen):
         self.buttons_layout.add_widget(self.back_button)
         self.buttons_layout.add_widget(self.delete_button)
         self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.delete_by_QR_button)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.buttons_layout)
 
 
     def delete_checked_rows(self, *args):
-        print()
-        print("================================================ INVOKE DELETE ROW =================================================")
         def deselect_rows(*args):
             self.data_tables.table_data.select_all("normal")
 
         row_index = None
         for data in self.data_tables.get_row_checks():
-            print(data)
             counter = 0
             for row in self.data_tables.row_data:
                 if str(row[3]) == str(data[3]):
@@ -505,12 +581,15 @@ class DeleteWindow(Screen):
             self.app.excel_df = self.app.excel_df.drop(self.app.excel_df.index[self.app.excel_df[self.column_headers[3][0]] == int(data[3])].tolist()[0])
         self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
         Clock.schedule_once(deselect_rows)
-        print()
 
+    def delete_by_QR_code(self, *args, **kwargs):
+        self.app.scan_with_delete = True
+        self.screen_transition("test scan page")
 
     def on_leave(self, *args, **kwargs):
         self.buttons_layout.remove_widget(self.back_button)
         self.buttons_layout.remove_widget(self.delete_button)
+        self.main_layout.remove_widget(self.delete_by_QR_button)
         self.main_layout.remove_widget(self.title)
         self.main_layout.remove_widget(self.table_layout)
         self.main_layout.remove_widget(self.buttons_layout)
@@ -528,6 +607,9 @@ class UpdateWindow(Screen):
         self.main_layout = BoxLayout(orientation='vertical')
 
         self.title = Label(text="Перемещение/Обновление оборудовании", halign='center', size_hint=(1.0, 0.1))
+
+        self.update_by_QR_button = Button(text='Обновить/Переместить по QR коду', size_hint=(1.0, 0.1))
+        self.update_by_QR_button.bind(on_press = self.update_by_QR_code)
 
         self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
@@ -550,7 +632,7 @@ class UpdateWindow(Screen):
 
         self.data_tables = MDDataTable(
             use_pagination=True,
-            check=False,
+            check=True,
 
             column_data= self.column_headers,
             row_data = self.table_content,
@@ -559,11 +641,17 @@ class UpdateWindow(Screen):
         self.table_layout.add_widget(self.data_tables)
 
         self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.update_by_QR_button)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
 
+    def update_by_QR_code(self, *args, **kwargs):
+        self.app.scan_with_update = True
+        self.screen_transition("test scan page")
+
     def on_leave(self, *args, **kwargs):
         self.main_layout.remove_widget(self.title)
+        self.main_layout.remove_widget(self.update_by_QR_button)
         self.main_layout.remove_widget(self.back_button)
         self.main_layout.remove_widget(self.table_layout)
 
@@ -714,8 +802,14 @@ class Application(MDApp):
 
     def __init__(self, *args, **kwargs):
         super(Application, self).__init__(*args, **kwargs)
+        self.excel_created = False
+        self.excel_choosen = False
         self.excel_df = None
         self.excel_df_path = None
+        self.scan_with_delete = False
+        self.scan_with_update = False
+        self.scan_with_check = False
+        self.current_item_QR = None
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -729,7 +823,7 @@ class Application(MDApp):
         sm.add_widget(DeleteWindow(self, name='delete page'))
         sm.add_widget(UpdateWindow(self, name='update page'))
         sm.add_widget(CheckWindow(self, name='check page'))
-        sm.add_widget(ScanWindow(name='test scan page'))
+        sm.add_widget(ScanWindow(self, name='test scan page'))
         sm.add_widget(AboutWindow(name='about page'))
         return sm
 
