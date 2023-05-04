@@ -637,6 +637,7 @@ class UpdateWindow(Screen):
             column_data= self.column_headers,
             row_data = self.table_content,
         )
+        self.data_tables.bind(on_check_press=self.on_check_press)
 
         self.table_layout.add_widget(self.data_tables)
 
@@ -644,6 +645,11 @@ class UpdateWindow(Screen):
         self.main_layout.add_widget(self.update_by_QR_button)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
+
+    def on_check_press(self, *args, **kwargs):
+        print(args)
+        print(kwargs)
+        print("Check pressed!")
 
     def update_by_QR_code(self, *args, **kwargs):
         self.app.scan_with_update = True
