@@ -24,7 +24,6 @@ from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
-from kivy.properties import BooleanProperty, StringProperty, NumericProperty, OptionProperty
 from functools import partial
 
 from kivymd.uix.label import MDLabel as Label
@@ -312,10 +311,6 @@ class AddWindow(Screen):
 
     def save_QR_code(self, *args):
 
-        provided = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
-        if not all(provided):
-            return
-
         self.app.excel_df = pd.read_excel(self.app.excel_df_path)
         if not os.path.isdir(os.path.join(self.app.user_data_dir, "QR коды")):
             os.mkdir(os.path.join(self.app.user_data_dir, "QR коды"))
@@ -330,6 +325,8 @@ class AddWindow(Screen):
         else:
             self.app.excel_df.loc[len(self.app.excel_df),:] = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
         self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
+
+        self.title.text = "QR код успешно сохранен"
 
         if self.app.scan_with_update:
             self.app.scan_with_update = False
@@ -363,6 +360,8 @@ class AddWindow(Screen):
 
     def show_QR_code(self, *args):
 
+        if not (self.item_name_entry.text and self.faculty_entry.text and self.department_entry.text and self.inventory_number_entry.text and self.responsible_entry.text and self.date_accepted_entry.text and self.room_entry.text):
+            return
         item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
         data_to_encode = item_name_entry + "_" + faculty_entry + "_" + department_entry + "_" + inventory_number_entry + "_" + responsible_entry + "_" + date_accepted_entry + "_" + room_entry
 
@@ -490,6 +489,7 @@ class CheckWindow(Screen):
         self.data_tables = MDDataTable(
             use_pagination=True,
             check=True,
+            pagination_menu_pos = 'auto',
 
             column_data= self.column_headers,
             row_data = self.table_content,
@@ -617,6 +617,8 @@ class UpdateWindow(Screen):
         self.add_widget(self.main_layout)
 
     def on_enter(self, *args, **kwargs):
+        self.check_count = 0
+
         self.table_layout = AnchorLayout()
 
         self.table_content = []
@@ -647,9 +649,13 @@ class UpdateWindow(Screen):
         self.main_layout.add_widget(self.back_button)
 
     def on_check_press(self, *args, **kwargs):
-        print(args)
-        print(kwargs)
-        print("Check pressed!")
+        if not self.check_count:
+            self.app.current_item_QR = args[1]
+            self.app.scan_with_update = True
+            self.screen_transition("add page")
+        self.check_count += 1
+        self.data_tables.table_data.select_all("normal")
+
 
     def update_by_QR_code(self, *args, **kwargs):
         self.app.scan_with_update = True
@@ -698,7 +704,6 @@ class MainWindow(Screen):
         self.save_button.bind(on_press = partial(self.screen_transition, " page"))
         self.export_button = Button(text='Экспорт')
         self.export_button.bind(on_press = partial(self.screen_transition, " page"))
-
 
         self.header_layout.add_widget(self.home_button)
         self.header_layout.add_widget(self.about_button)

@@ -7,6 +7,7 @@ import io, os
 user_data_dir = r"C:\Users\Пользователь\AppData\Roaming\application"
 DEFAUL_IMAGE_SIZE = (100, 100)
 
+
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
     byteImg = image.resize(DEFAUL_IMAGE_SIZE)
@@ -97,7 +98,6 @@ def fetch_db_row(inventory_number):
         if connection:
             connection.close()
     return rows
-
 
 
 if __name__ == '__main__':
