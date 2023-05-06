@@ -1,14 +1,13 @@
-import os
-import re
+import os, re
 from io import BytesIO
+from datetime import datetime
+
 from kivy.app import App
 from kivy import platform
 from kivy.metrics import dp
-from kivymd.app import MDApp
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
-# from kivy.uix.label import Label
 from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.setupconfig import USE_SDL2
@@ -26,6 +25,8 @@ from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
 
+from kivymd.app import MDApp
+from kivymd.uix.pickers import MDDatePicker
 from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.datatables import MDDataTable
 
@@ -35,6 +36,78 @@ import qrcode
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 # xlwt in needed for this version of pandas !!!
+
+
+class SorterClass():
+
+    def __init__(self):
+        pass
+
+    def populate_table(self):
+
+        self.table_content = []
+        for index, row in self.app.excel_df.iterrows():
+            row_content = []
+            for column_name in list(self.app.excel_df.columns):
+                try:
+                    row_content.append(row[column_name].date())
+                except:
+                    row_content.append(row[column_name])
+            self.table_content.append(row_content)
+
+        self.column_headers = []
+        for column_name in list(self.app.excel_df.columns):
+            if column_name == "Ответственный":
+                self.column_headers.append((column_name, dp(30), self.sort_on_responsible))
+            elif column_name == "Кабинет":
+                self.column_headers.append((column_name, dp(30), self.sort_on_room))
+            elif column_name == "Наименование":
+                self.column_headers.append((column_name, dp(30), self.sort_on_item_name))
+            elif column_name == "Инвентарный номер":
+                self.column_headers.append((column_name, dp(30), self.sort_on_inventory_number))
+            elif column_name == "Дата принятия":
+                self.column_headers.append((column_name, dp(30), self.sort_on_data_accepted))
+            else:
+                self.column_headers.append((column_name, dp(30)))
+
+
+    def sort_on_responsible(self, data):
+        return zip(
+            *sorted(
+                enumerate(data),
+                key=lambda l: l[1][4]
+            )
+        )
+    def sort_on_data_accepted(self, data):
+        return zip(
+            *sorted(
+                enumerate(data),
+                key=lambda l: l[1][5]
+            )
+        )
+    def sort_on_room(self, data):
+        return zip(
+            *sorted(
+                enumerate(data),
+                key=lambda l: l[1][6]
+            )
+        )
+    def sort_on_item_name(self, data):
+        return zip(
+            *sorted(
+                enumerate(data),
+                key=lambda l: l[1][0]
+            )
+        )
+    def sort_on_inventory_number(self, data):
+        return zip(
+            *sorted(
+                enumerate(data),
+                key=lambda l: l[1][3]
+            )
+        )
+
+
 
 class IntegerInput(TextInput):
 
@@ -239,7 +312,9 @@ class AddWindow(Screen):
         self.inventory_number_label = Label(text="Инвентарный номер", halign="center");  self.inventory_number_entry = IntegerInput()
         self.responsible_label = Label(text="Ответственный", halign="center");           self.responsible_entry = TextInput()
         self.date_accepted_label = Label(text="Дата принятия", halign="center");         self.date_accepted_entry = TextInput()
-        self.room_label = Label(text="Кабинет", halign="center");                        self.room_entry = IntegerInput()
+        self.room_label = Label(text="Кабинет", halign="center");                        self.room_entry = TextInput()
+
+        self.date_accepted_entry.bind(on_touch_down=self.show_date_picker)
 
         self.generate_button = Button(text='Сгенерировать QR код')
         self.generate_button.bind(on_press = self.show_QR_code)
@@ -263,8 +338,22 @@ class AddWindow(Screen):
         self.main_layout.add_widget(self.label_entiry_pair_layout7);
         self.main_layout.add_widget(self.generate_button)
 
-
         self.add_widget(self.main_layout)
+
+
+    def on_touch_down(self, touch):
+        if self.date_accepted_entry.collide_point(*touch.pos):
+            date_dialog = MDDatePicker()
+            date_dialog.bind(on_save=self.on_date_save)
+            date_dialog.open()
+        return super(AddWindow, self).on_touch_down(touch)
+
+    def on_date_save(self, instance, value, date_range):
+        print(instance, value, date_range)
+        self.date_accepted_entry.text = str(value)
+
+    def show_date_picker(self, *args, **kwargs):
+        pass
 
     def on_enter(self, *args, **kwargs):
         self.item_name_entry.text = ""
@@ -404,7 +493,7 @@ class AddWindow(Screen):
         self.manager.current = to_where
 
 
-class ListWindow(Screen):
+class ListWindow(Screen, SorterClass):
 
     def __init__(self, app, **kwargs):
         super(ListWindow, self).__init__(**kwargs)
@@ -422,16 +511,7 @@ class ListWindow(Screen):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
-        self.table_content = []
-        for index, row in self.app.excel_df.iterrows():
-            row_content = []
-            for column_name in list(self.app.excel_df.columns):
-                row_content.append(row[column_name])
-            self.table_content.append(row_content)
-
-        self.column_headers = []
-        for column_name in list(self.app.excel_df.columns):
-            self.column_headers.append((column_name, dp(30)))
+        self.populate_table()
 
         self.data_tables = MDDataTable(
             use_pagination=True,
@@ -457,7 +537,7 @@ class ListWindow(Screen):
 
 
 
-class CheckWindow(Screen):
+class CheckWindow(Screen, SorterClass):
 
     def __init__(self, app, **kwargs):
         super(CheckWindow, self).__init__(**kwargs)
@@ -475,16 +555,7 @@ class CheckWindow(Screen):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
-        self.table_content = []
-        for index, row in self.app.excel_df.iterrows():
-            row_content = []
-            for column_name in list(self.app.excel_df.columns):
-                row_content.append(row[column_name])
-            self.table_content.append(row_content)
-
-        self.column_headers = []
-        for column_name in list(self.app.excel_df.columns):
-            self.column_headers.append((column_name, dp(30)))
+        self.populate_table()
 
         self.data_tables = MDDataTable(
             use_pagination=True,
@@ -494,12 +565,25 @@ class CheckWindow(Screen):
             column_data= self.column_headers,
             row_data = self.table_content,
         )
+        self.data_tables.bind(on_row_press=self.on_row_press)
+        self.data_tables.bind(on_check_press=self.on_check_press)
 
         self.table_layout.add_widget(self.data_tables)
 
         self.main_layout.add_widget(self.title)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
+
+    def on_row_press(self, instance_table, instance_row):
+        instance_row.ids.check.state == 'down'
+        print(type(instance_row))
+        # if instance_row.ids.check.state == 'normal':
+        #     instance_row.ids.check.state = 'down'
+        # else:
+        #     instance_row.ids.check.state = 'normal'
+
+    def on_check_press(self, instance_table, current_row):
+        pass
 
     def on_leave(self, *args, **kwargs):
         self.main_layout.remove_widget(self.title)
@@ -510,7 +594,8 @@ class CheckWindow(Screen):
         self.manager.current = to_where
 
 
-class DeleteWindow(Screen):
+
+class DeleteWindow(Screen, SorterClass):
 
     def __init__(self, app, **kwargs):
         super(DeleteWindow, self).__init__(**kwargs)
@@ -532,21 +617,12 @@ class DeleteWindow(Screen):
         self.add_widget(self.main_layout)
 
     def on_enter(self, *args, **kwargs):
-        self.rows_to_delete = []
+
 
         self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
         self.table_layout = AnchorLayout()
 
-        self.table_content = []
-        for index, row in self.app.excel_df.iterrows():
-            row_content = []
-            for column_name in list(self.app.excel_df.columns):
-                row_content.append(row[column_name])
-            self.table_content.append(row_content)
-
-        self.column_headers = []
-        for column_name in list(self.app.excel_df.columns):
-            self.column_headers.append((column_name, dp(30)))
+        self.populate_table()
 
         self.data_tables = MDDataTable(
             use_pagination=True,
@@ -598,7 +674,7 @@ class DeleteWindow(Screen):
         self.manager.current = to_where
 
 
-class UpdateWindow(Screen):
+class UpdateWindow(Screen, SorterClass):
 
     def __init__(self, app, **kwargs):
         super(UpdateWindow, self).__init__(**kwargs)
@@ -621,16 +697,7 @@ class UpdateWindow(Screen):
 
         self.table_layout = AnchorLayout()
 
-        self.table_content = []
-        for index, row in self.app.excel_df.iterrows():
-            row_content = []
-            for column_name in list(self.app.excel_df.columns):
-                row_content.append(row[column_name])
-            self.table_content.append(row_content)
-
-        self.column_headers = []
-        for column_name in list(self.app.excel_df.columns):
-            self.column_headers.append((column_name, dp(30)))
+        self.populate_table()
 
         self.data_tables = MDDataTable(
             use_pagination=True,
