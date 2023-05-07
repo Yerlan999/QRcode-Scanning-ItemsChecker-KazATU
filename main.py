@@ -47,16 +47,17 @@ class SorterClass():
 
         if checking_mode: # Checking mode
 
-            self.table_content = []
-            for index, row in self.app.excel_df.iterrows():
-                row_content = []
-                for column_name in list(self.app.excel_df.columns):
-                    try:
-                        row_content.append(row[column_name].date())
-                    except:
-                        row_content.append(row[column_name])
-                supplemented_row = ["?"] + row_content
-                self.table_content.append(supplemented_row)
+            if not self.table_content:
+                self.table_content = []
+                for index, row in self.app.excel_df.iterrows():
+                    row_content = []
+                    for column_name in list(self.app.excel_df.columns):
+                        try:
+                            row_content.append(row[column_name].date())
+                        except:
+                            row_content.append(row[column_name])
+                    supplemented_row = ["?"] + row_content
+                    self.table_content.append(supplemented_row)
 
             self.column_headers = []
             for column_name in ["Наличие"] + list(self.app.excel_df.columns):
@@ -248,11 +249,15 @@ class ScanWindow(Screen):
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
             self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
-            self.home_button.bind(on_press = partial(self.screen_transition, "main page"))
+            self.home_button.bind(on_press = partial(self.screen_transition, "delete page"))
         elif self.app.scan_with_update:
             self.title.text = "Подведите камеру к QR коду для обновления оборудования."
             self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
-            self.home_button.bind(on_press = partial(self.screen_transition, "main page"))
+            self.home_button.bind(on_press = partial(self.screen_transition, "update page"))
+        elif self.app.scan_with_check:
+            self.title.text = "Подведите камеру к QR коду для отметки оборудования."
+            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button.bind(on_press = partial(self.screen_transition, "check page"))
         else:
             self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
             self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
@@ -305,10 +310,13 @@ class ScanWindow(Screen):
                 self.app.excel_df = self.app.excel_df.drop(indexes_found)
                 self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
                 self.app.scan_with_delete = False
+                self.app.current_item_QR = None
                 self.screen_transition("delete page")
             elif self.app.scan_with_update and indexes_found:
                 self.screen_transition("add page")
-
+            elif self.app.scan_with_check and indexes_found:
+                print("Check the row that has just been found")
+                self.screen_transition("check page")
             if (self.app.scan_with_update or self.app.scan_with_delete) and not indexes_found:
                 qr_code_value = "Данного оборудования нет в excel файле!\n\n" + "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
             else:
@@ -459,12 +467,14 @@ class AddWindow(Screen):
             self.app.excel_df.loc[found_indexes,:] = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
         else:
             self.app.excel_df.loc[len(self.app.excel_df),:] = [self.item_name_entry.text, self.faculty_entry.text, self.department_entry.text, int(self.inventory_number_entry.text), self.responsible_entry.text, self.date_accepted_entry.text, int(self.room_entry.text)]
+        print("Before saving", self.app.excel_df)
         self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
 
         self.title.text = "QR код успешно сохранен"
 
         if self.app.scan_with_update:
             self.app.scan_with_update = False
+            self.app.current_item_QR = None
             self.screen_transition("update page")
             return
         self.screen_transition("main page")
@@ -582,16 +592,43 @@ class CheckWindow(Screen, SorterClass):
         super(CheckWindow, self).__init__(**kwargs)
         self.app = app
 
+        self.table_content = []
+
+        self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
         self.main_layout = BoxLayout(orientation='vertical')
 
         self.title = Label(text="Инвентаризация оборудовании", halign='center', size_hint=(1.0, 0.1))
 
-        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
+        self.check_by_QR_button = Button(text='Отметка по QR коду', size_hint=(1.0, 0.1))
+        self.check_by_QR_button.bind(on_press = self.check_by_QR_code)
+
+        self.back_button = Button(text='Назад')
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.finish_button = Button(text='Сохранить и завершить')
+        self.finish_button.bind(on_press = self.finish_checking)
 
         self.add_widget(self.main_layout)
 
     def on_enter(self, *args, **kwargs):
+        # After scaning by QR code
+        if self.app.current_item_QR:
+            this_row = None; current_symbol = None;
+            for i, row in enumerate(self.table_content):
+                if str(row[4]) == str(self.app.current_item_QR[3]):
+                    this_row = i
+                    current_symbol = row[0]
+            temporal_row_values = self.table_content[this_row]
+            if current_symbol == "?":
+                temporal_row_values[0] =  "+"
+            else:
+                temporal_row_values[0] =  "?"
+
+            print("Old row:", self.data_tables.row_data[this_row])
+            print("New row:", temporal_row_values)
+            self.data_tables.update_row(self.data_tables.row_data[this_row], temporal_row_values)
+            self.app.current_item_QR = None
+
         self.table_layout = AnchorLayout()
 
         self.populate_table(use_checks=False, checking_mode=True)
@@ -601,16 +638,34 @@ class CheckWindow(Screen, SorterClass):
         self.table_layout.add_widget(self.data_tables)
 
         self.main_layout.add_widget(self.title)
+        self.main_layout.add_widget(self.check_by_QR_button)
+        self.buttons_layout.add_widget(self.back_button)
+        self.buttons_layout.add_widget(self.finish_button)
         self.main_layout.add_widget(self.table_layout)
-        self.main_layout.add_widget(self.back_button)
+        self.main_layout.add_widget(self.buttons_layout)
+
+    def finish_checking(self, *args, **kwargs):
+        check_df = pd.DataFrame(self.table_content, columns=["Наличие"] + list(self.app.excel_df.columns))
+        check_df.to_excel(os.path.join(self.app.user_data_dir, "Инвентаризация "+str(datetime.today().date())+".xlsx"), index=False)
 
     def on_row_press(self, *args, **kwargs):
-        pass
+        temporal_row_values = self.table_content[int(args[1].index/len(self.app.excel_df.columns))]
+        if temporal_row_values[0] == "?":
+            temporal_row_values[0] = "+"
+        else:
+            temporal_row_values[0] = "?"
+        self.data_tables.update_row(self.data_tables.row_data[int(args[1].index/len(self.app.excel_df.columns))], temporal_row_values)
 
     def on_leave(self, *args, **kwargs):
         self.main_layout.remove_widget(self.title)
-        self.main_layout.remove_widget(self.back_button)
+        self.main_layout.remove_widget(self.check_by_QR_button)
+        self.buttons_layout.remove_widget(self.back_button)
+        self.buttons_layout.remove_widget(self.finish_button)
         self.main_layout.remove_widget(self.table_layout)
+
+    def check_by_QR_code(self, *args, **kwargs):
+        self.app.scan_with_check = True
+        self.screen_transition("test scan page")
 
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
@@ -741,8 +796,9 @@ class UpdateWindow(Screen, SorterClass):
 
 class MainWindow(Screen):
 
-    def __init__(self, **kwargs):
+    def __init__(self, app, **kwargs):
         super(MainWindow, self).__init__(**kwargs)
+        self.app = app
 
         self.header_layout = BoxLayout(orientation='horizontal', spacing=10)
         self.footer_layout = BoxLayout(orientation='horizontal', spacing=10)
@@ -784,11 +840,36 @@ class MainWindow(Screen):
         self.main_layout.add_widget(self.check_button)
         self.main_layout.add_widget(self.delete_button)
         self.main_layout.add_widget(self.look_up_button)
-        self.main_layout.add_widget(self.footer_layout)
-
 
         self.add_widget(self.main_layout)
 
+    def on_enter(self, *args, **kwargs):
+        if not self.app.excel_choosen:
+            self.app.excel_df = pd.DataFrame(columns=["Наименование", "Факультет", "Кафедра", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"])
+            self.app.excel_df.to_excel(os.path.join(self.app.user_data_dir, "Оборудование кафедры ЭЭО.xlsx"), index=False)
+            self.app.excel_df_path = os.path.join(self.app.user_data_dir, "Оборудование кафедры ЭЭО.xlsx")
+            self.app.excel_created = True
+
+        if (self.app.excel_created or self.app.excel_choosen) and len(self.app.excel_df) > 0:
+            self.add_button.disabled = False
+            self.update_button.disabled = False
+            self.check_button.disabled = False
+            self.look_up_button.disabled = False
+        else:
+            self.add_button.disabled = False
+            self.update_button.disabled = True
+            self.check_button.disabled = True
+            self.look_up_button.disabled = True
+            self.delete_button.disabled = True
+
+        self.main_layout.add_widget(self.footer_layout)
+
+    def on_leave(self, *args, **kwargs):
+        self.main_layout.remove_widget(self.add_button)
+        self.main_layout.remove_widget(self.update_button)
+        self.main_layout.remove_widget(self.check_button)
+        self.main_layout.remove_widget(self.delete_button)
+        self.main_layout.remove_widget(self.footer_layout)
 
     def call_about_page(self, *args, **kwargs):
         popup_main_layout = BoxLayout(orientation='vertical')
@@ -896,7 +977,7 @@ class Application(MDApp):
         sm = ScreenManagement(transition=FadeTransition())
         sm.add_widget(StartUpWindow(name='home page'))
         sm.add_widget(ChooseWindow(self, name='choose page'))
-        sm.add_widget(MainWindow(name='main page'))
+        sm.add_widget(MainWindow(self, name='main page'))
         sm.add_widget(AddWindow(self, name='add page'))
         sm.add_widget(ListWindow(self, name='list page'))
         sm.add_widget(DeleteWindow(self, name='delete page'))
