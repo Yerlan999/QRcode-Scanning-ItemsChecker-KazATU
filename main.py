@@ -43,32 +43,69 @@ class SorterClass():
     def __init__(self):
         pass
 
-    def populate_table(self):
+    def populate_table(self, use_checks=True, checking_mode=False):
 
-        self.table_content = []
-        for index, row in self.app.excel_df.iterrows():
-            row_content = []
+        if checking_mode: # Checking mode
+
+            self.table_content = []
+            for index, row in self.app.excel_df.iterrows():
+                row_content = []
+                for column_name in list(self.app.excel_df.columns):
+                    try:
+                        row_content.append(row[column_name].date())
+                    except:
+                        row_content.append(row[column_name])
+                supplemented_row = ["?"] + row_content
+                self.table_content.append(supplemented_row)
+
+            self.column_headers = []
+            for column_name in ["Наличие"] + list(self.app.excel_df.columns):
+                if column_name == "Ответственный":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_responsible))
+                elif column_name == "Кабинет":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_room))
+                elif column_name == "Наименование":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_item_name))
+                elif column_name == "Инвентарный номер":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_inventory_number))
+                elif column_name == "Дата принятия":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_data_accepted))
+                else:
+                    self.column_headers.append((column_name, dp(30)))
+
+        else: # Other modes
+
+            self.table_content = []
+            for index, row in self.app.excel_df.iterrows():
+                row_content = []
+                for column_name in list(self.app.excel_df.columns):
+                    try:
+                        row_content.append(row[column_name].date())
+                    except:
+                        row_content.append(row[column_name])
+                self.table_content.append(row_content)
+
+            self.column_headers = []
             for column_name in list(self.app.excel_df.columns):
-                try:
-                    row_content.append(row[column_name].date())
-                except:
-                    row_content.append(row[column_name])
-            self.table_content.append(row_content)
+                if column_name == "Ответственный":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_responsible))
+                elif column_name == "Кабинет":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_room))
+                elif column_name == "Наименование":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_item_name))
+                elif column_name == "Инвентарный номер":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_inventory_number))
+                elif column_name == "Дата принятия":
+                    self.column_headers.append((column_name, dp(30), self.sort_on_data_accepted))
+                else:
+                    self.column_headers.append((column_name, dp(30)))
 
-        self.column_headers = []
-        for column_name in list(self.app.excel_df.columns):
-            if column_name == "Ответственный":
-                self.column_headers.append((column_name, dp(30), self.sort_on_responsible))
-            elif column_name == "Кабинет":
-                self.column_headers.append((column_name, dp(30), self.sort_on_room))
-            elif column_name == "Наименование":
-                self.column_headers.append((column_name, dp(30), self.sort_on_item_name))
-            elif column_name == "Инвентарный номер":
-                self.column_headers.append((column_name, dp(30), self.sort_on_inventory_number))
-            elif column_name == "Дата принятия":
-                self.column_headers.append((column_name, dp(30), self.sort_on_data_accepted))
-            else:
-                self.column_headers.append((column_name, dp(30)))
+        self.data_tables = MDDataTable(
+            check=use_checks,
+            rows_num = len(self.app.excel_df),
+            column_data= self.column_headers,
+            row_data = self.table_content,
+        )
 
 
     def sort_on_responsible(self, data):
@@ -293,8 +330,6 @@ class AddWindow(Screen):
         self.header_layout = BoxLayout(orientation='horizontal')
         self.main_layout = BoxLayout(orientation="vertical")
 
-        self.back_button = Button(text='Назад')
-        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
         self.about_button = Button(text='Инструкция')
         self.about_button.bind(on_press = self.call_about_page)
 
@@ -327,9 +362,6 @@ class AddWindow(Screen):
         self.label_entiry_pair_layout6.add_widget(self.date_accepted_label); self.label_entiry_pair_layout6.add_widget(self.date_accepted_entry);
         self.label_entiry_pair_layout7.add_widget(self.room_label); self.label_entiry_pair_layout7.add_widget(self.room_entry);
 
-        self.header_layout.add_widget(self.back_button)
-        self.header_layout.add_widget(self.about_button)
-
         self.main_layout.add_widget(self.header_layout)
         self.main_layout.add_widget(self.title)
         self.main_layout.add_widget(self.label_entiry_pair_layout1); self.main_layout.add_widget(self.label_entiry_pair_layout2);
@@ -356,6 +388,7 @@ class AddWindow(Screen):
         pass
 
     def on_enter(self, *args, **kwargs):
+
         self.item_name_entry.text = ""
         self.faculty_entry.text = ""
         self.department_entry.text = ""
@@ -363,6 +396,8 @@ class AddWindow(Screen):
         self.responsible_entry.text = ""
         self.date_accepted_entry.text = ""
         self.room_entry.text = ""
+
+        self.back_button = Button(text='Назад')
 
         if self.app.scan_with_update and self.app.current_item_QR:
             self.title.text = "Обновите данные для оборудования"
@@ -375,11 +410,22 @@ class AddWindow(Screen):
                 self.department_entry.text = department_entry
                 self.inventory_number_entry.text = str(inventory_number_entry)
                 self.responsible_entry.text = responsible_entry
-                self.date_accepted_entry.text = date_accepted_entry
+                self.date_accepted_entry.text = str(date_accepted_entry.date())
                 self.room_entry.text = str(room_entry)
 
                 self.generate_button.text = "Обновить и сгенерировать QR код"
 
+                self.back_button.bind(on_press = partial(self.screen_transition, "update page"))
+        else:
+            self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+
+        self.header_layout.add_widget(self.back_button)
+        self.header_layout.add_widget(self.about_button)
+
+
+    def on_leave(self, *args, **kwargs):
+        self.header_layout.remove_widget(self.back_button)
+        self.header_layout.remove_widget(self.about_button)
 
     def call_about_page(self, *args, **kwargs):
         popup_main_layout = BoxLayout(orientation='vertical')
@@ -490,6 +536,7 @@ class AddWindow(Screen):
         popup.open()
 
     def screen_transition(self, to_where, *args):
+        self.app.scan_with_update = False
         self.manager.current = to_where
 
 
@@ -511,15 +558,7 @@ class ListWindow(Screen, SorterClass):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
-        self.populate_table()
-
-        self.data_tables = MDDataTable(
-            use_pagination=True,
-            check=False,
-
-            column_data= self.column_headers,
-            row_data = self.table_content,
-        )
+        self.populate_table(use_checks=False)
 
         self.table_layout.add_widget(self.data_tables)
 
@@ -555,18 +594,9 @@ class CheckWindow(Screen, SorterClass):
     def on_enter(self, *args, **kwargs):
         self.table_layout = AnchorLayout()
 
-        self.populate_table()
+        self.populate_table(use_checks=False, checking_mode=True)
 
-        self.data_tables = MDDataTable(
-            use_pagination=True,
-            check=True,
-            pagination_menu_pos = 'auto',
-
-            column_data= self.column_headers,
-            row_data = self.table_content,
-        )
         self.data_tables.bind(on_row_press=self.on_row_press)
-        self.data_tables.bind(on_check_press=self.on_check_press)
 
         self.table_layout.add_widget(self.data_tables)
 
@@ -574,15 +604,7 @@ class CheckWindow(Screen, SorterClass):
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
 
-    def on_row_press(self, instance_table, instance_row):
-        instance_row.ids.check.state == 'down'
-        print(type(instance_row))
-        # if instance_row.ids.check.state == 'normal':
-        #     instance_row.ids.check.state = 'down'
-        # else:
-        #     instance_row.ids.check.state = 'normal'
-
-    def on_check_press(self, instance_table, current_row):
+    def on_row_press(self, *args, **kwargs):
         pass
 
     def on_leave(self, *args, **kwargs):
@@ -618,19 +640,10 @@ class DeleteWindow(Screen, SorterClass):
 
     def on_enter(self, *args, **kwargs):
 
-
         self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
         self.table_layout = AnchorLayout()
 
-        self.populate_table()
-
-        self.data_tables = MDDataTable(
-            use_pagination=True,
-            check=True,
-
-            column_data= self.column_headers,
-            row_data = self.table_content,
-        )
+        self.populate_table(use_checks=True)
 
         self.table_layout.add_widget(self.data_tables)
         self.buttons_layout.add_widget(self.back_button)
@@ -640,7 +653,7 @@ class DeleteWindow(Screen, SorterClass):
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.buttons_layout)
 
-
+    # !!! NEEDED TO BE CORRECTED SLIGHTLY !!!
     def delete_checked_rows(self, *args):
         def deselect_rows(*args):
             self.data_tables.table_data.select_all("normal")
@@ -693,20 +706,12 @@ class UpdateWindow(Screen, SorterClass):
         self.add_widget(self.main_layout)
 
     def on_enter(self, *args, **kwargs):
-        self.check_count = 0
 
         self.table_layout = AnchorLayout()
 
-        self.populate_table()
+        self.populate_table(use_checks=False)
 
-        self.data_tables = MDDataTable(
-            use_pagination=True,
-            check=True,
-
-            column_data= self.column_headers,
-            row_data = self.table_content,
-        )
-        self.data_tables.bind(on_check_press=self.on_check_press)
+        self.data_tables.bind(on_row_press=self.on_row_press)
 
         self.table_layout.add_widget(self.data_tables)
 
@@ -715,14 +720,10 @@ class UpdateWindow(Screen, SorterClass):
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
 
-    def on_check_press(self, *args, **kwargs):
-        if not self.check_count:
-            self.app.current_item_QR = args[1]
-            self.app.scan_with_update = True
-            self.screen_transition("add page")
-        self.check_count += 1
-        self.data_tables.table_data.select_all("normal")
-
+    def on_row_press(self, *args, **kwargs):
+        self.app.current_item_QR = self.table_content[int(args[1].index/len(self.app.excel_df.columns))]
+        self.app.scan_with_update = True
+        self.screen_transition("add page")
 
     def update_by_QR_code(self, *args, **kwargs):
         self.app.scan_with_update = True
@@ -909,4 +910,5 @@ class Application(MDApp):
 if __name__ == "__main__":
     application = Application()
     application.run()
+
 
