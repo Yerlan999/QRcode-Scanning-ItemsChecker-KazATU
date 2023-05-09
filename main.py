@@ -12,6 +12,7 @@ from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.graphics.texture import Texture
 from kivy.uix.image import Image as kiImage
 from kivy.uix.behaviors import FocusBehavior
@@ -30,9 +31,6 @@ from kivymd.app import MDApp
 from kivymd.uix.pickers import MDDatePicker
 from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.datatables import MDDataTable
-from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.imagelist.imagelist import MDSmartTile
 
 import cv2
 import numpy
@@ -42,14 +40,14 @@ from PIL import Image, ImageDraw, ImageFont
 # xlwt in needed for this version of pandas !!!
 
 
-DEFAUL_IMAGE_SIZE = (100, 100)
+DEFAUL_IMAGE_SIZE = (300, 300)
 DEFAUL_CAMERA_SIZE = (600, 600)
 
 
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
     byteImg = image.resize(DEFAUL_IMAGE_SIZE)
-    byteImg.save(byteImgIO, "JPEG")
+    byteImg.save(byteImgIO, "PNG")
     byteImgIO.seek(0)
     byteImg = byteImgIO.read()
     return byteImg
@@ -62,80 +60,57 @@ def convert_bytes_to_image(image_bytes):
 
 
 def create_db_table(root_directory):
-    try:
-        if not os.path.isdir(os.path.join(root_directory, "db")):
-            os.mkdir(os.path.join(root_directory, "db"))
-        connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
-        cursor = connection.cursor()
-        cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='images' ''')
-        if not cursor.fetchone()[0]==1:
-            cursor.execute("CREATE TABLE images (inventory_number INTEGER, image_bytes BLOB)")
-            connection.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print("Ошибка:", error)
-    finally:
-        if connection:
-            connection.close()
+    if not os.path.isdir(os.path.join(root_directory, "db")):
+        os.mkdir(os.path.join(root_directory, "db"))
+    connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
+    cursor = connection.cursor()
+    cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='images' ''')
+    if not cursor.fetchone()[0]==1:
+        cursor.execute("CREATE TABLE images (inventory_number INTEGER, image_bytes BLOB)")
+        connection.commit()
+    cursor.close()
+    if connection:
+        connection.close()
 
 
 def create_db_row(inventory_number, image_bytes, root_directory):
-    try:
-        connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
-        cursor = connection.cursor()
-        cursor.execute("INSERT INTO images VALUES (:inventory_number, :image_bytes)", {"inventory_number":inventory_number, "image_bytes": image_bytes})
-        connection.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print("Ошибка:", error)
-    finally:
-        if connection:
-            connection.close()
+    connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
+    cursor = connection.cursor()
+    cursor.execute("INSERT INTO images VALUES (:inventory_number, :image_bytes)", {"inventory_number":inventory_number, "image_bytes": image_bytes})
+    connection.commit()
+    cursor.close()
+    if connection:
+        connection.close()
 
 
 def update_db_row(inventory_number, image_bytes, root_directory):
-    try:
-        connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
-        cursor = connection.cursor()
-        cursor.execute(("UPDATE images SET image_bytes =:image_bytes WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number, "image_bytes": image_bytes})
-        connection.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print("Ошибка:", error)
-    finally:
-        if connection:
-            connection.close()
+    connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
+    cursor = connection.cursor()
+    cursor.execute(("UPDATE images SET image_bytes =:image_bytes WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number, "image_bytes": image_bytes})
+    connection.commit()
+    cursor.close()
+    if connection:
+        connection.close()
 
 
 def delete_db_row(inventory_number, root_directory):
-    try:
-        connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
-        cursor = connection.cursor()
-        cursor.execute(("DELETE FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number})
-        connection.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print("Ошибка:", error)
-    finally:
-        if connection:
-            connection.close()
+    connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
+    cursor = connection.cursor()
+    cursor.execute(("DELETE FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number})
+    connection.commit()
+    cursor.close()
+    if connection:
+        connection.close()
 
 
-def fetch_db_row(inventory_number, root_directory):
-    try:
-        connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
-        cursor = connection.cursor()
-        if inventory_number == -1:
-            rows = cursor.execute("SELECT * FROM images").fetchall()
-        rows = cursor.execute(("SELECT * FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number}).fetchall()
-        connection.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        print("Ошибка:", error)
-    finally:
-        if connection:
-            connection.close()
-    return rows
+def fetch_db_image(inventory_number, root_directory):
+    connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
+    cursor = connection.cursor()
+    image_bytes = cursor.execute(("SELECT * FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number}).fetchall()[0][1]
+    cursor.close()
+    if connection:
+        connection.close()
+    return image_bytes
 
 
 class SorterClass():
@@ -291,10 +266,16 @@ class FileChooserWidget(BoxLayout):
             self.app.excel_df = excel_df
             self.app.excel_df_path = filename[0]
             self.parent_screen.screen_transition("main page")
+        else:
+            print("Other file has been chosen", os.path.splitext(filename[0])[1])
 
 
     def selected(self, filename):
-        pass
+        try:
+            self.ids.image.source = filename[0]
+        except:
+            pass
+
 
 
 class ChooseWindow(Screen):
@@ -320,43 +301,16 @@ class ChooseWindow(Screen):
         self.manager.current = to_where
 
 
-
 class ScreenManagement(ScreenManager):
     def __init__(self, *args, **kwargs):
         super(ScreenManagement, self).__init__(*args, **kwargs)
 
 
-class ImagesWindow(Screen):
-
-    def __init__(self, app, *args, **kwargs):
-        super(ImagesWindow, self).__init__(*args, **kwargs)
-        self.app = app
-
-    def on_enter(self, *args, **kwargs):
-        layout = MDGridLayout(cols=3, spacing=10)
-        image_bytes = fetch_db_row(1, self.app.user_data_dir)[0][1]
-
-        print(image_bytes)
-
-        pillow_image = convert_bytes_to_image(image_bytes)
-        pillow_image.save("test.jpg")
-
-        open_cv_image = numpy.array(pillow_image)
-        open_cv_image = open_cv_image[:, :, ::-1].copy()
-
-        w, h, _ = open_cv_image.shape
-        texture = Texture.create(size=(w, h))
-        texture.blit_buffer(open_cv_image.flatten(), colorfmt='rgb', bufferfmt='ubyte')
-
-        w_img = kiImage(size=(w, h), texture=texture)
-        self.add_widget(w_img)
-
-        return self
 
 class CaptureWindow(Screen):
 
-    def __init__(self, app, *args, **kwargs):
-        super(CaptureWindow, self).__init__(*args, **kwargs)
+    def __init__(self, app, **kwargs):
+        super(CaptureWindow, self).__init__(**kwargs)
         self.app = app
 
         create_db_table(self.app.user_data_dir)
@@ -380,16 +334,21 @@ class CaptureWindow(Screen):
         self.add_widget(self.layout)
 
     def capture_frame(self, *args, **kwargs):
+        self.camera_object.play = False
         texture = self.camera_object.texture
         size = texture.size
         pixels = texture.pixels
-        pillow_image = Image.frombytes(mode='RGB', size=size, data=pixels)
+        pillow_image = Image.frombytes(mode='RGBA', size=size, data=pixels)
+
         image_bytes = convert_image_to_bytes(pillow_image)
         create_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
-        self.camera_object.play = False
         self.screen_transition("main page")
 
     def postpone(self, *args, **kwargs):
+        temporal_image = Image.new('RGBA', DEFAUL_IMAGE_SIZE, color = (75, 110, 140))
+        image_bytes = convert_image_to_bytes(temporal_image)
+        create_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
+
         self.camera_object.play = False
         self.camera_object.texture = None
         self.screen_transition("main page")
@@ -406,7 +365,10 @@ class CaptureWindow(Screen):
         self.camera_object.play = False
         self.camera_object.texture = None
         self.layout.remove_widget(self.camera_object)
-        self.layout.remove_widget(self.home_button)
+        self.layout.remove_widget(self.buttons_layout)
+
+    def screen_transition(self, to_where, *args):
+        self.manager.current = to_where
 
 
 class ScanWindow(Screen):
@@ -737,12 +699,59 @@ class ListWindow(Screen, SorterClass):
         self.table_layout = AnchorLayout()
 
         self.populate_table(use_checks=False)
+        self.data_tables.bind(on_row_press=self.on_row_press)
 
         self.table_layout.add_widget(self.data_tables)
 
         self.main_layout.add_widget(self.title)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
+
+    def on_row_press(self, *args, **kwargs):
+        temporal_row_values = self.table_content[int(args[1].index/len(self.column_headers))]
+
+        self.popup_main_layout = BoxLayout(orientation='vertical')
+        self.popup_buttons_layout = BoxLayout(orientation='horizontal')
+
+        self.title = Label(text=f"Подробности оборудования {temporal_row_values[0]}. Инв ном: {temporal_row_values[3]}", halign="center")
+
+        image_bytes = fetch_db_image(temporal_row_values[3], self.app.user_data_dir)
+
+        pillow_image = convert_bytes_to_image(image_bytes)
+
+        open_cv_image = numpy.array(pillow_image)
+        open_cv_image = open_cv_image[:,:,:].copy()
+        width, height, _ = open_cv_image.shape
+        texture = Texture.create(size=(width, height))
+        texture.blit_buffer(numpy.rot90(open_cv_image, 2).flatten(), colorfmt='rgba', bufferfmt='ubyte')
+        image_widget = kiImage(size=(width, height), texture=texture)
+
+        self.close_button = Button(text='Закрыть')
+        self.select_image_button = Button(text='Указать')
+        self.recapture_image_button = Button(text='Сфоткать')
+        self.select_image_button.bind(on_press = self.select_image)
+        self.recapture_image_button.bind(on_press = self.recapture_image)
+
+        self.popup_main_layout.add_widget(self.title)
+        self.popup_buttons_layout.add_widget(self.close_button)
+        self.popup_buttons_layout.add_widget(self.select_image_button)
+        self.popup_buttons_layout.add_widget(self.recapture_image_button)
+        self.popup_main_layout.add_widget(image_widget)
+        self.popup_main_layout.add_widget(self.popup_buttons_layout)
+
+        self.popup = Popup(title='Подробнее', content=self.popup_main_layout, auto_dismiss=False)
+
+        self.close_button.bind(on_press = self.popup.dismiss)
+
+        self.popup.open()
+
+
+    def select_image(self, *args, **kwargs):
+        self.popup.dismiss()
+        self.screen_transition("choose page")
+
+    def recapture_image(self, *args, **kwargs):
+        pass
 
     def on_leave(self, *args, **kwargs):
         self.main_layout.remove_widget(self.title)
@@ -819,13 +828,7 @@ class CheckWindow(Screen, SorterClass):
         check_df.to_excel(os.path.join(self.app.user_data_dir, "Инвентаризация "+str(datetime.today().date())+".xls"), index=False)
 
     def on_row_press(self, *args, **kwargs):
-        # !!! GETS OUT OF RANGE !!!
         temporal_row_values = self.table_content[int(args[1].index/len(self.column_headers))]
-
-        print("Real index", int(args[1].index))
-        print("Assumpted index", int(args[1].index/len(self.column_headers)))
-        print("Row values", temporal_row_values)
-
         if temporal_row_values[0] == "Нет":
             temporal_row_values[0] = "Да"
         else:
@@ -1008,9 +1011,6 @@ class MainWindow(Screen):
         self.look_up_button = Button(text='Просмотр списка оборудовании')
         self.look_up_button.bind(on_press = partial(self.screen_transition, "list page"))
 
-        self.look_up_images_button = Button(text='Просмотр изображении оборудовании')
-        self.look_up_images_button.bind(on_press = partial(self.screen_transition, "images page"))
-
         self.header_layout.add_widget(self.home_button)
         self.header_layout.add_widget(self.about_button)
 
@@ -1020,7 +1020,6 @@ class MainWindow(Screen):
         self.main_layout.add_widget(self.check_button)
         self.main_layout.add_widget(self.delete_button)
         self.main_layout.add_widget(self.look_up_button)
-        self.main_layout.add_widget(self.look_up_images_button)
 
         self.add_widget(self.main_layout)
 
@@ -1162,7 +1161,6 @@ class Application(MDApp):
         sm.add_widget(CheckWindow(self, name='check page'))
         sm.add_widget(ScanWindow(self, name='test scan page'))
         sm.add_widget(CaptureWindow(self, name='capture page'))
-        sm.add_widget(ImagesWindow(self, name='images page'))
         sm.add_widget(AboutWindow(name='about page'))
         return sm
 
