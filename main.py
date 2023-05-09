@@ -104,9 +104,13 @@ def delete_db_row(inventory_number, root_directory):
 
 
 def fetch_db_image(inventory_number, root_directory):
+    image_bytes = None
     connection = sqlite3.connect(os.path.join(os.path.join(root_directory, "db"), "images.db"))
     cursor = connection.cursor()
-    image_bytes = cursor.execute(("SELECT * FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number}).fetchall()[0][1]
+    try:
+        image_bytes = cursor.execute(("SELECT * FROM images WHERE inventory_number=:inventory_number"), {"inventory_number":inventory_number}).fetchall()[0][1]
+    except:
+        pass
     cursor.close()
     if connection:
         connection.close()
@@ -266,8 +270,12 @@ class FileChooserWidget(BoxLayout):
             self.app.excel_df = excel_df
             self.app.excel_df_path = filename[0]
             self.parent_screen.screen_transition("main page")
-        else:
-            print("Other file has been chosen", os.path.splitext(filename[0])[1])
+        elif (filename) and os.path.splitext(filename[0])[1] in [".jpg", ".jpeg", ".png"] and self.app.current_item_inv_num:
+            pillow_image = Image.open(filename[0])
+            image_bytes = convert_image_to_bytes(pillow_image)
+            update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
+            self.app.current_item_inv_num = None
+            self.parent_screen.screen_transition("main page")
 
 
     def selected(self, filename):
@@ -341,14 +349,11 @@ class CaptureWindow(Screen):
         pillow_image = Image.frombytes(mode='RGBA', size=size, data=pixels)
 
         image_bytes = convert_image_to_bytes(pillow_image)
-        create_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
+        update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
+        self.app.current_item_inv_num = None
         self.screen_transition("main page")
 
     def postpone(self, *args, **kwargs):
-        temporal_image = Image.new('RGBA', DEFAUL_IMAGE_SIZE, color = (75, 110, 140))
-        image_bytes = convert_image_to_bytes(temporal_image)
-        create_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
-
         self.camera_object.play = False
         self.camera_object.texture = None
         self.screen_transition("main page")
@@ -452,6 +457,7 @@ class ScanWindow(Screen):
 
             if self.app.scan_with_delete and indexes_found:
                 self.app.excel_df = self.app.excel_df.drop(indexes_found)
+                delete_db_row(self.app.current_item_QR[3], self.app.user_data_dir)
                 self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
                 self.app.scan_with_delete = False
                 self.app.current_item_QR = None
@@ -633,6 +639,13 @@ class AddWindow(Screen):
         item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
         data_to_encode = item_name_entry + "_" + faculty_entry + "_" + department_entry + "_" + inventory_number_entry + "_" + responsible_entry + "_" + date_accepted_entry + "_" + room_entry
 
+        # Создание временного изображения если нет
+        current_image = fetch_db_image(inventory_number_entry, self.app.user_data_dir)
+        if not current_image:
+            temporal_image = Image.new('RGBA', DEFAUL_IMAGE_SIZE, color = (75, 110, 140))
+            image_bytes = convert_image_to_bytes(temporal_image)
+            create_db_row(inventory_number_entry, image_bytes, self.app.user_data_dir)
+
         qr = qrcode.QRCode(version = 1, box_size = 10, border = 5)
         qr.add_data(data_to_encode)
         qr.make(fit = True)
@@ -693,6 +706,8 @@ class ListWindow(Screen, SorterClass):
         self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
+        self.main_layout.add_widget(self.title)
+
         self.add_widget(self.main_layout)
 
     def on_enter(self, *args, **kwargs):
@@ -703,32 +718,34 @@ class ListWindow(Screen, SorterClass):
 
         self.table_layout.add_widget(self.data_tables)
 
-        self.main_layout.add_widget(self.title)
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.back_button)
 
     def on_row_press(self, *args, **kwargs):
         temporal_row_values = self.table_content[int(args[1].index/len(self.column_headers))]
 
+        self.app.current_item_inv_num = temporal_row_values[3]
+
         self.popup_main_layout = BoxLayout(orientation='vertical')
         self.popup_buttons_layout = BoxLayout(orientation='horizontal')
 
-        self.title = Label(text=f"Подробности оборудования {temporal_row_values[0]}. Инв ном: {temporal_row_values[3]}", halign="center")
+        self.title = Label(text=f"Наименование оборудования: {temporal_row_values[0]}.\nИнвентарный номер: {temporal_row_values[3]}", halign="center")
 
         image_bytes = fetch_db_image(temporal_row_values[3], self.app.user_data_dir)
 
         pillow_image = convert_bytes_to_image(image_bytes)
-
-        open_cv_image = numpy.array(pillow_image)
-        open_cv_image = open_cv_image[:,:,:].copy()
-        width, height, _ = open_cv_image.shape
-        texture = Texture.create(size=(width, height))
-        texture.blit_buffer(numpy.rot90(open_cv_image, 2).flatten(), colorfmt='rgba', bufferfmt='ubyte')
-        image_widget = kiImage(size=(width, height), texture=texture)
+        if pillow_image:
+            open_cv_image = numpy.array(pillow_image)
+            open_cv_image = open_cv_image[:,:,:].copy()
+            width, height, _ = open_cv_image.shape
+            texture = Texture.create(size=(width, height))
+            texture.blit_buffer(numpy.rot90(open_cv_image, 2).flatten(), colorfmt='rgba', bufferfmt='ubyte')
+            image_widget = kiImage(size=(width, height), texture=texture)
 
         self.close_button = Button(text='Закрыть')
         self.select_image_button = Button(text='Указать')
         self.recapture_image_button = Button(text='Сфоткать')
+        self.close_button.bind(on_press = self.close_popup)
         self.select_image_button.bind(on_press = self.select_image)
         self.recapture_image_button.bind(on_press = self.recapture_image)
 
@@ -736,25 +753,27 @@ class ListWindow(Screen, SorterClass):
         self.popup_buttons_layout.add_widget(self.close_button)
         self.popup_buttons_layout.add_widget(self.select_image_button)
         self.popup_buttons_layout.add_widget(self.recapture_image_button)
-        self.popup_main_layout.add_widget(image_widget)
+        if pillow_image:
+            self.popup_main_layout.add_widget(image_widget)
         self.popup_main_layout.add_widget(self.popup_buttons_layout)
 
-        self.popup = Popup(title='Подробнее', content=self.popup_main_layout, auto_dismiss=False)
-
-        self.close_button.bind(on_press = self.popup.dismiss)
+        self.popup = Popup(title='Подробности оборудования', content=self.popup_main_layout, auto_dismiss=False)
 
         self.popup.open()
 
+    def close_popup(self, *args, **kwargs):
+        self.app.current_item_inv_num = None
+        self.popup.dismiss()
 
     def select_image(self, *args, **kwargs):
         self.popup.dismiss()
         self.screen_transition("choose page")
 
     def recapture_image(self, *args, **kwargs):
-        pass
+        self.popup.dismiss()
+        self.screen_transition("capture page")
 
     def on_leave(self, *args, **kwargs):
-        self.main_layout.remove_widget(self.title)
         self.main_layout.remove_widget(self.back_button)
         self.main_layout.remove_widget(self.table_layout)
 
@@ -904,6 +923,7 @@ class DeleteWindow(Screen, SorterClass):
             try:
                 self.data_tables.remove_row(self.data_tables.row_data[row_index])
                 self.app.excel_df = self.app.excel_df.drop(self.app.excel_df.index[self.app.excel_df[self.column_headers[3][0]] == data[3]].tolist())
+                delete_db_row(self.data_tables.row_data[row_index][3], self.app.user_data_dir)
             except Exception as error:
                 print("Something went wrong: ", error)
 
@@ -1136,11 +1156,14 @@ class Application(MDApp):
 
     def __init__(self, *args, **kwargs):
         super(Application, self).__init__(*args, **kwargs)
+
         self.excel_created = False
         self.excel_choosen = False
         self.excel_to_create = False
+
         self.excel_df = None
         self.excel_df_path = None
+
         self.scan_with_delete = False
         self.scan_with_update = False
         self.scan_with_check = False
