@@ -1099,7 +1099,7 @@ class StartUpWindow(Screen):
             self.create_button.bind(on_press = self.create_new_excel_file)
 
             self.check_button = Button(text='Проверочное сканирование')
-            self.check_button.bind(on_press = partial(self.screen_transition, "test scan page"))
+            self.check_button.bind(on_press = self.just_read_scan)
 
             self.about_button = Button(text='О программе')
             self.about_button.bind(on_press = partial(self.screen_transition, "about page"))
@@ -1118,6 +1118,11 @@ class StartUpWindow(Screen):
             primary_layout.add_widget(self.exit_button)
 
             self.add_widget(primary_layout)
+
+        def just_read_scan(self, *args, **kwargs):
+            self.app.current_item_inv_num = None
+            self.app.current_item_QR = None
+            self.screen_transition("test scan page")
 
         def create_new_excel_file(self, *args, **kwargs):
             self.app.excel_to_create = True
