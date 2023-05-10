@@ -26,6 +26,7 @@ from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
 
+# Should be included in requirements (buildozer.spec)
 from kivymd.app import MDApp
 from kivymd.uix.pickers import MDDatePicker
 from kivymd.uix.label import MDLabel as Label
@@ -1120,6 +1121,10 @@ class StartUpWindow(Screen):
             self.add_widget(primary_layout)
 
         def just_read_scan(self, *args, **kwargs):
+            self.app.scan_with_update = False
+            self.app.scan_with_delete = False
+            self.app.scan_with_check = False
+
             self.app.current_item_inv_num = None
             self.app.current_item_QR = None
             self.screen_transition("test scan page")
@@ -1176,6 +1181,7 @@ class Application(MDApp):
         self.scan_with_delete = False
         self.scan_with_update = False
         self.scan_with_check = False
+
         self.current_item_QR = None
         self.current_item_inv_num = None
 
@@ -1184,8 +1190,7 @@ class Application(MDApp):
             request_permissions([
                 Permission.CAMERA,
                 Permission.WRITE_EXTERNAL_STORAGE,
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.MANAGE_DOCUMENTS
+                Permission.READ_EXTERNAL_STORAGE
             ])
 
         self.theme_cls.theme_style = "Dark"
