@@ -26,7 +26,6 @@ from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
 
-
 from kivymd.app import MDApp
 from kivymd.uix.pickers import MDDatePicker
 from kivymd.uix.label import MDLabel as Label
@@ -38,6 +37,11 @@ import qrcode
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 # xlwt in needed for this version of pandas !!!
+
+from kivy.utils import platform
+if platform == 'android':
+    import android
+    from android.permissions import request_permissions, Permission
 
 
 DEFAUL_IMAGE_SIZE = (300, 300)
@@ -1171,6 +1175,14 @@ class Application(MDApp):
         self.current_item_inv_num = None
 
     def build(self):
+        if platform == 'android':
+            request_permissions([
+                Permission.CAMERA,
+                Permission.WRITE_EXTERNAL_STORAGE,
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.MANAGE_DOCUMENTS
+            ])
+
         self.theme_cls.theme_style = "Dark"
 
         sm = ScreenManagement(transition=FadeTransition())
