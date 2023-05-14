@@ -1189,8 +1189,6 @@ class Application(MDApp):
         if platform == 'android':
             request_permissions([
                 Permission.CAMERA,
-                Permission.WRITE_EXTERNAL_STORAGE,
-                Permission.READ_EXTERNAL_STORAGE
             ])
 
         self.theme_cls.theme_style = "Dark"
