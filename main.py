@@ -3,7 +3,7 @@ from io import BytesIO
 from datetime import datetime
 
 from kivy.app import App
-from kivy.metrics import dp
+from kivy.metrics import dp, cm
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
@@ -31,6 +31,7 @@ from kivymd.app import MDApp
 from kivymd.uix.pickers import MDDatePicker
 from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.datatables import MDDataTable
+from kivymd.uix.button.button import MDRectangleFlatButton
 
 import cv2
 import numpy
@@ -42,12 +43,13 @@ from PIL import Image, ImageDraw, ImageFont
 from kivy.utils import platform
 if platform == 'android':
     import android
+    from android import mActivity
     from android.permissions import request_permissions, Permission
 
 
 DEFAUL_IMAGE_SIZE = (300, 300)
 DEFAUL_CAMERA_SIZE = (600, 600)
-
+BUTTON_TEXT_SIZE = 20
 
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
@@ -248,7 +250,7 @@ class IntegerInput(TextInput):
 Builder.load_string("""
 <FileChooserWidget>:
     id: file_chooser
-    Button
+    MDRectangleFlatButton
         text: "Выбрать"
         on_release: file_chooser.open(filechooser.path, filechooser.selection)
         size_hint: 1.0, 0.1
@@ -300,7 +302,7 @@ class ChooseWindow(Screen):
 
         self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center', size_hint=(1.0, 0.1))
 
-        self.home_button = Button(text='Домой', size_hint=(1.0, 0.1))
+        self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
@@ -333,10 +335,10 @@ class CaptureWindow(Screen):
 
         self.title = Label(text="Сфотграфируйте оборудование", halign='center', size_hint=(1.0, 0.1))
 
-        self.caputre_button = Button(text='Сфоткать')
+        self.caputre_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.caputre_button.bind(on_press = self.capture_frame)
 
-        self.later_button = Button(text='Потом')
+        self.later_button = MDRectangleFlatButton(text='Потом', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.later_button.bind(on_press = self.postpone)
 
         self.buttons_layout.add_widget(self.caputre_button)
@@ -402,18 +404,18 @@ class ScanWindow(Screen):
 
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
-            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
             self.home_button.bind(on_press = partial(self.screen_transition, "delete page"))
         elif self.app.scan_with_update:
             self.title.text = "Подведите камеру к QR коду для обновления оборудования."
-            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
             self.home_button.bind(on_press = partial(self.screen_transition, "update page"))
         elif self.app.scan_with_check:
             self.title.text = "Подведите камеру к QR коду для отметки оборудования."
-            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
             self.home_button.bind(on_press = partial(self.screen_transition, "check page"))
         else:
-            self.home_button = Button(text='Назад', size_hint=(1.0, 0.1))
+            self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
             self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
@@ -494,7 +496,7 @@ class AddWindow(Screen):
         self.header_layout = BoxLayout(orientation='horizontal')
         self.main_layout = BoxLayout(orientation="vertical")
 
-        self.about_button = Button(text='Инструкция')
+        self.about_button = MDRectangleFlatButton(text='Инструкция', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.about_button.bind(on_press = self.call_about_page)
 
         self.label_entiry_pair_layout1 = BoxLayout(orientation='horizontal')
@@ -515,7 +517,7 @@ class AddWindow(Screen):
 
         self.date_accepted_entry.bind(on_touch_down=self.show_date_picker)
 
-        self.generate_button = Button(text='Сгенерировать QR код')
+        self.generate_button = MDRectangleFlatButton(text='Сгенерировать QR код', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.generate_button.bind(on_press = self.show_QR_code)
 
         self.label_entiry_pair_layout1.add_widget(self.item_name_label); self.label_entiry_pair_layout1.add_widget(self.item_name_entry);
@@ -560,7 +562,7 @@ class AddWindow(Screen):
         self.date_accepted_entry.text = ""
         self.room_entry.text = ""
 
-        self.back_button = Button(text='Назад')
+        self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
 
         if self.app.scan_with_update and self.app.current_item_QR:
             self.title.text = "Обновите данные для оборудования"
@@ -600,7 +602,7 @@ class AddWindow(Screen):
         self.title = Label(text="Как пользоваться данной программой.", halign="center")
         self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign="center")
 
-        self.close_button = Button(text='Закрыть')
+        self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
 
         popup_main_layout.add_widget(self.title)
         popup_main_layout.add_widget(self.body)
@@ -669,9 +671,9 @@ class AddWindow(Screen):
 
         self.title = Label(text="Получен QR код для оборудования", halign="center")
 
-        self.close_button = Button(text='Закрыть')
-        self.save_button = Button(text='Сохранить'); self.save_button.bind(on_press = self.save_QR_code)
-        self.capture_button = Button(text='Сфоткать'); self.capture_button.bind(on_press = partial(self.capture_frame, inventory_number_entry))
+        self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
+        self.save_button = MDRectangleFlatButton(text='Сохранить'); self.save_button.bind(on_press = self.save_QR_code, size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
+        self.capture_button = MDRectangleFlatButton(text='Сфоткать'); self.capture_button.bind(on_press = partial(self.capture_frame, inventory_number_entry), size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
 
         self.footer_layout.add_widget(self.close_button)
         self.footer_layout.add_widget(self.save_button)
@@ -708,7 +710,7 @@ class ListWindow(Screen, SorterClass):
 
         self.title = Label(text="Список оборудовании.", halign='center', size_hint=(1.0, 0.1))
 
-        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
+        self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
         self.main_layout.add_widget(self.title)
@@ -747,9 +749,9 @@ class ListWindow(Screen, SorterClass):
             texture.blit_buffer(numpy.rot90(open_cv_image, 2).flatten(), colorfmt='rgba', bufferfmt='ubyte')
             image_widget = kiImage(size=(width, height), texture=texture)
 
-        self.close_button = Button(text='Закрыть')
-        self.select_image_button = Button(text='Указать')
-        self.recapture_image_button = Button(text='Сфоткать')
+        self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
+        self.select_image_button = MDRectangleFlatButton(text='Указать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
+        self.recapture_image_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.close_button.bind(on_press = self.close_popup)
         self.select_image_button.bind(on_press = self.select_image)
         self.recapture_image_button.bind(on_press = self.recapture_image)
@@ -801,7 +803,7 @@ class CheckWindow(Screen, SorterClass):
 
         self.title = Label(text="Инвентаризация оборудовании", halign='center', size_hint=(1.0, 0.1))
 
-        self.check_by_QR_button = Button(text='Отметка по QR коду', size_hint=(1.0, 0.1))
+        self.check_by_QR_button = MDRectangleFlatButton(text='Отметка по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.check_by_QR_button.bind(on_press = self.check_by_QR_code)
 
         self.add_widget(self.main_layout)
@@ -810,10 +812,10 @@ class CheckWindow(Screen, SorterClass):
 
         self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
 
-        self.back_button = Button(text='Назад')
+        self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
-        self.finish_button = Button(text='Сохранить и завершить')
+        self.finish_button = MDRectangleFlatButton(text='Сохранить и завершить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.finish_button.bind(on_press = self.finish_checking)
 
         # After scaning by QR code
@@ -886,13 +888,13 @@ class DeleteWindow(Screen, SorterClass):
 
         self.title = Label(text="Удаление оборудовании", halign='center', size_hint=(1.0, 0.1))
 
-        self.delete_by_QR_button = Button(text='Удалить по QR коду', size_hint=(1.0, 0.1))
+        self.delete_by_QR_button = MDRectangleFlatButton(text='Удалить по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.delete_by_QR_button.bind(on_press = self.delete_by_QR_code)
 
-        self.back_button = Button(text='Назад')
+        self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
-        self.delete_button = Button(text='Удалить')
+        self.delete_button = MDRectangleFlatButton(text='Удалить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.delete_button.bind(on_press = self.delete_checked_rows)
 
         self.add_widget(self.main_layout)
@@ -963,10 +965,10 @@ class UpdateWindow(Screen, SorterClass):
 
         self.title = Label(text="Перемещение/Обновление оборудовании", halign='center', size_hint=(1.0, 0.1))
 
-        self.update_by_QR_button = Button(text='Обновить/Переместить по QR коду', size_hint=(1.0, 0.1))
+        self.update_by_QR_button = MDRectangleFlatButton(text='Обновить/Переместить по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.update_by_QR_button.bind(on_press = self.update_by_QR_code)
 
-        self.back_button = Button(text='Назад', size_hint=(1.0, 0.1))
+        self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
 
         self.add_widget(self.main_layout)
@@ -1016,24 +1018,24 @@ class MainWindow(Screen):
         self.header_layout = BoxLayout(orientation='horizontal', spacing=10)
         self.main_layout = BoxLayout(orientation='vertical', spacing=20, padding=30)
 
-        self.home_button = Button(text='Домой')
+        self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
-        self.about_button = Button(text='Инструкция')
+        self.about_button = MDRectangleFlatButton(text='Инструкция', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.about_button.bind(on_press = self.call_about_page)
 
-        self.add_button = Button(text='Добавить оборудование')
+        self.add_button = MDRectangleFlatButton(text='Добавить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.add_button.bind(on_press = partial(self.screen_transition, "add page"))
 
-        self.update_button = Button(text='Переместить/Обновить оборудование')
+        self.update_button = MDRectangleFlatButton(text='Переместить/Обновить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.update_button.bind(on_press = partial(self.screen_transition, "update page"))
 
-        self.check_button = Button(text='Провести инвентаризацию')
+        self.check_button = MDRectangleFlatButton(text='Провести инвентаризацию', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.check_button.bind(on_press = partial(self.screen_transition, "check page"))
 
-        self.delete_button = Button(text='Удалить оборудование')
+        self.delete_button = MDRectangleFlatButton(text='Удалить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.delete_button.bind(on_press = partial(self.screen_transition, "delete page"))
 
-        self.look_up_button = Button(text='Просмотр списка оборудовании')
+        self.look_up_button = MDRectangleFlatButton(text='Просмотр списка оборудовании', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.look_up_button.bind(on_press = partial(self.screen_transition, "list page"))
 
         self.header_layout.add_widget(self.home_button)
@@ -1064,7 +1066,7 @@ class MainWindow(Screen):
         self.title = Label(text="Как пользоваться данной программой.", halign="center")
         self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign="center")
 
-        self.close_button = Button(text='Закрыть')
+        self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
 
         popup_main_layout.add_widget(self.title)
         popup_main_layout.add_widget(self.body)
@@ -1090,22 +1092,22 @@ class StartUpWindow(Screen):
             primary_layout = BoxLayout(orientation='vertical', spacing=20, padding=30)
             secondary_layout = BoxLayout(orientation='horizontal', spacing=10)
 
-            self.title = Label(text="Помощник лаборанта", halign='center')
-            self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново", halign='center')
+            self.title = Label(text="Помощник лаборанта", halign='center', font_style="H4")
+            self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново", halign='center', font_style="H6")
 
-            self.choose_button = Button(text='Выбрать')
+            self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.choose_button.bind(on_press = partial(self.screen_transition, "choose page"))
 
-            self.create_button = Button(text='Создать')
+            self.create_button = MDRectangleFlatButton(text='Создать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.create_button.bind(on_press = self.create_new_excel_file)
 
-            self.check_button = Button(text='Проверочное сканирование')
+            self.check_button = MDRectangleFlatButton(text='Проверочное сканирование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.check_button.bind(on_press = self.just_read_scan)
 
-            self.about_button = Button(text='О программе')
+            self.about_button = MDRectangleFlatButton(text='О программе', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.about_button.bind(on_press = partial(self.screen_transition, "about page"))
 
-            self.exit_button = Button(text='Выход')
+            self.exit_button = MDRectangleFlatButton(text='Выход', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.exit_button.bind(on_release=App.get_running_app().stop)
 
             secondary_layout.add_widget(self.choose_button)
@@ -1143,14 +1145,15 @@ class StartUpWindow(Screen):
 
 class AboutWindow(Screen):
 
-    def __init__(self, **kwargs):
+    def __init__(self, app, **kwargs):
         super(AboutWindow, self).__init__(**kwargs)
+        self.app = app
 
         layout = BoxLayout(orientation='vertical')
 
         self.title = Label(text="Как пользоваться данной программой.", halign='center', size_hint=(1.0, 0.1))
         self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign='center', size_hint=(1.0, 0.8))
-        self.home_button = Button(text='Домой', size_hint=(1.0, 0.1))
+        self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
@@ -1170,6 +1173,13 @@ class Application(MDApp):
 
     def __init__(self, *args, **kwargs):
         super(Application, self).__init__(*args, **kwargs)
+
+        if platform == 'android':
+            context = mActivity.getApplicationContext()
+            result =  context.getExternalFilesDir(None)   # don't forget the argument
+            if result:
+                storage_path =  str(result.toString())
+                self.user_data_dir = storage_path
 
         self.excel_created = False
         self.excel_choosen = False
@@ -1204,7 +1214,7 @@ class Application(MDApp):
         sm.add_widget(CheckWindow(self, name='check page'))
         sm.add_widget(ScanWindow(self, name='test scan page'))
         sm.add_widget(CaptureWindow(self, name='capture page'))
-        sm.add_widget(AboutWindow(name='about page'))
+        sm.add_widget(AboutWindow(self, name='about page'))
         return sm
 
 

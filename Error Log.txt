@@ -1,0 +1,188 @@
+NFO]:    # Building recipes
+[INFO]:    Building freetype for armeabi-v7a
+[INFO]:    Build freetype (without harfbuzz)
+[INFO]:    Configure args are:
+        ---enable-shared
+        ---without-bzip2
+        ---with-zlib=yes
+        ---with-png=no
+        ---with-harfbuzz=no
+        ---disable-static
+        ---prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype
+        ---host=arm-linux-androideabi
+[INFO]:    -> directory context /home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype
+[DEBUG]:   -> running configure --enable-shared --without-bzip2 --with-zlib=yes --with-png=no --with-harfbuzz=no --disable-static --prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype --host=arm-linux-androideabi
+[DEBUG]:
+[DEBUG]:        FreeType build system -- automatic system detection
+[DEBUG]:
+[DEBUG]:        The following settings are used:
+[DEBUG]:
+[DEBUG]:          platform                    unix
+[DEBUG]:          compiler                    /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+[DEBUG]:          configuration directory     ./builds/unix
+[DEBUG]:          configuration rules         ./builds/unix/unix.mk
+[DEBUG]:
+[DEBUG]:        If this does not correspond to your system or settings please remove the file
+[DEBUG]:        `config.mk' from this directory then read the INSTALL file for help.
+[DEBUG]:
+[DEBUG]:        Otherwise, simply type `make -j16' again to build the library,
+[DEBUG]:        or `make -j16 refdoc' to build the API reference (this needs python >= 2.6).
+[DEBUG]:
+[DEBUG]:        cd builds/unix; \
+[DEBUG]:                ./configure  '--enable-shared' '--without-bzip2' '--with-zlib=yes' '--with-png=no' '--with-harfbuzz=no' '--disable-static' '--prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype' '--host=arm-linux-androideabi'
+[DEBUG]:        checking build system type... x86_64-pc-linux-gnu
+[DEBUG]:        checking host system type... arm-unknown-linux-androideabi
+[DEBUG]:        checking for arm-linux-androideabi-gcc... /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+[DEBUG]:        checking whether the C compiler works... no
+[DEBUG]:        configure: error: in `/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype/builds/unix':
+[DEBUG]:        configure: error: C compiler cannot create executables
+[DEBUG]:        See `config.log' for more details
+[DEBUG]:        make: *** [builds/unix/detect.mk:91: setup] Error 77
+Exception in thread background thread for pid 26397:
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.10/threading.py", line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 1641, in wrap
+    fn(*rgs, **kwargs)
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 2569, in background_thread
+    handle_exit_code(exit_code)
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 2269, in fn
+    return self.command.handle_command_exit_code(exit_code)
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 869, in handle_command_exit_code
+    raise exc
+sh.ErrorReturnCode_2:
+
+  RAN: /home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype/configure --enable-shared --without-bzip2 --with-zlib=yes --with-png=no --with-harfbuzz=no --disable-static --prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype --host=arm-linux-androideabi
+
+  STDOUT:
+
+FreeType build system -- automatic system detection
+
+The following settings are used:
+
+  platform                    unix
+  compiler                    /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+  configuration directory     ./builds/unix
+  configuration rules         ./builds/unix/unix.mk
+
+If this does not correspond to your system or settings please remove the file
+`config.mk' from this directory then read the INSTALL file for help.
+
+Otherwise, simply type `make -j16' again to build the library,
+or `make -j16 refdoc' to build the API reference (this needs python >= 2.6).
+
+cd builds/unix; \
+        ./configure  '--enable-shared' '--without-bzip2' '--with-zlib=yes' '--with-png=no' '--with-harfbuzz=no' '--disable-static' '--prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype' '--host=arm-linux-androideabi'
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... arm-unknown-linux-androideabi
+checking for arm-linux-androideabi-gcc... /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+checking whether the C compiler works... no
+configure: error: in `/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype/builds/unix':
+configure: error: C compiler cannot create executables
+See `config.log' for more details
+make: *** [builds/unix/detect.mk:91: setup] Error 77
+
+
+  STDERR:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/toolchain.py", line 1312, in <module>
+    main()
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/entrypoints.py", line 18, in main
+    ToolchainCL()
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/toolchain.py", line 734, in __init__
+    getattr(self, command)(args)
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/toolchain.py", line 153, in wrapper_func
+    build_dist_from_args(ctx, dist, args)
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/toolchain.py", line 212, in build_dist_from_args
+    build_recipes(build_order, python_modules, ctx,
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/build.py", line 504, in build_recipes
+    recipe.build_arch(arch)
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/freetype/__init__.py", line 114, in build_arch
+    shprint(configure, *config_args, _env=env)
+  File "/home/yerlan/compilation/.buildozer/android/platform/python-for-android/pythonforandroid/logger.py", line 167, in shprint
+    for line in output:
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 915, in next
+    self.wait()
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 845, in wait
+    self.handle_command_exit_code(exit_code)
+  File "/home/yerlan/.local/lib/python3.10/site-packages/sh.py", line 869, in handle_command_exit_code
+    raise exc
+sh.ErrorReturnCode_2:
+
+  RAN: /home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype/configure --enable-shared --without-bzip2 --with-zlib=yes --with-png=no --with-harfbuzz=no --disable-static --prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype --host=arm-linux-androideabi
+
+  STDOUT:
+
+FreeType build system -- automatic system detection
+
+The following settings are used:
+
+  platform                    unix
+  compiler                    /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+  configuration directory     ./builds/unix
+  configuration rules         ./builds/unix/unix.mk
+
+If this does not correspond to your system or settings please remove the file
+`config.mk' from this directory then read the INSTALL file for help.
+
+Otherwise, simply type `make -j16' again to build the library,
+or `make -j16 refdoc' to build the API reference (this needs python >= 2.6).
+
+cd builds/unix; \
+        ./configure  '--enable-shared' '--without-bzip2' '--with-zlib=yes' '--with-png=no' '--with-harfbuzz=no' '--disable-static' '--prefix=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype' '--host=arm-linux-androideabi'
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... arm-unknown-linux-androideabi
+checking for arm-linux-androideabi-gcc... /home/yerlan/.buildozer/android/platform/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target armv7a-linux-androideabi21 -fomit-frame-pointer -march=armv7-a -mfloat-abi=softfp -mfpu=vfp -mthumb -fPIC
+checking whether the C compiler works... no
+configure: error: in `/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/other_builds/freetype/armeabi-v7a__ndk_target_21/freetype/builds/unix':
+configure: error: C compiler cannot create executables
+See `config.log' for more details
+make: *** [builds/unix/detect.mk:91: setup] Error 77
+
+
+  STDERR:
+
+# Command failed: ['/usr/bin/python3', '-m', 'pythonforandroid.toolchain', 'create', '--dist_name=labhelper', '--bootstrap=sdl2', '--requirements=python3==3.10.6,kivy==2.1.0,kivymd,daal,daal4py,odc-geo,hatchling,spyder,pathspec,pyproj,pyqt5,pyqtwebengine,python-dateutil,pytz,numpy,pandas,opencv-python,Pillow,qrcode,colorama,pypng,typing-extensions,xlwt', '--arch=arm64-v8a', '--arch=armeabi-v7a', '--copy-libs', '--color=always', '--storage-dir=/home/yerlan/compilation/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a', '--ndk-api=21', '--ignore-setup-py', '--debug']
+# ENVIRONMENT:
+#     SHELL = '/bin/bash'
+#     WSL_DISTRO_NAME = 'Ubuntu-22.04'
+#     WT_SESSION = 'b1025df6-5166-4d5f-a633-ba71ae9815e0'
+#     NAME = 'DESKTOP-GU5PNVB'
+#     PWD = '/home/yerlan/compilation'
+#     LOGNAME = 'yerlan'
+#     HOME = '/home/yerlan'
+#     LANG = 'C.UTF-8'
+#     LS_COLORS = 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'
+#     LESSCLOSE = '/usr/bin/lesspipe %s %s'
+#     TERM = 'xterm-256color'
+#     LESSOPEN = '| /usr/bin/lesspipe %s'
+#     USER = 'yerlan'
+#     SHLVL = '1'
+#     WSLENV = 'WT_SESSION::WT_PROFILE_ID'
+#     XDG_DATA_DIRS = '/usr/local/share:/usr/share:/var/lib/snapd/desktop'
+#     PATH = ('/home/yerlan/.buildozer/android/platform/apache-ant-1.9.4/bin:/home/yerlan/.local/bin:/home/yerlan/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/gtkmm64/bin:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/MinGW/bin:/mnt/c/Program '
+ 'Files/MATLAB/R2021a/bin:/mnt/c/Program '
+ 'Files/CMake/bin:/mnt/c/ProgramData/chocolatey/bin:/mnt/c/Program '
+ 'Files/Git/cmd:/mnt/c/Users/Пользователь/AppData/Local/Programs/Python/Python37/Scripts:/mnt/c/vcpkg:/mnt/c/ProgramData/Anaconda3/Lib/site-packages/osgeo:/mnt/c/OpenSSL-Win32:/mnt/c/ProgramData/anaconda3:/mnt/c/ProgramData/anaconda3/Library/mingw-w64/bin:/mnt/c/ProgramData/anaconda3/Library/usr/bin:/mnt/c/ProgramData/anaconda3/Library/bin:/mnt/c/ProgramData/anaconda3/Scripts:/mnt/c/Users/Пользователь/AppData/Local/Microsoft/WindowsApps:/mnt/c/tools/msys64:/snap/bin')
+#     HOSTTYPE = 'x86_64'
+#     WT_PROFILE_ID = '{d7b20cea-47a9-518c-95a4-c8bd91e2e1c6}'
+#     OLDPWD = '/home/yerlan'
+#     _ = '/home/yerlan/.local/bin/buildozer'
+#     PACKAGES_PATH = '/home/yerlan/.buildozer/android/packages'
+#     ANDROIDSDK = '/home/yerlan/.buildozer/android/platform/android-sdk'
+#     ANDROIDNDK = '/home/yerlan/.buildozer/android/platform/android-ndk-r25b'
+#     ANDROIDAPI = '33'
+#     ANDROIDMINAPI = '21'
+#
+# Buildozer failed to execute the last command
+# The error might be hidden in the log above this error
+# Please read the full log, and search for it before
+# raising an issue with buildozer itself.
+# In case of a bug report, please add a full log with log_level = 2
