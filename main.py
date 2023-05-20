@@ -47,7 +47,7 @@ if platform == 'android':
 
 DEFAUL_IMAGE_SIZE = (300, 300)
 DEFAUL_CAMERA_SIZE = (600, 600)
-BUTTON_TEXT_SIZE = 20
+BUTTON_TEXT_SIZE = 30
 
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
@@ -364,8 +364,8 @@ class CaptureWindow(Screen):
         self.screen_transition("main page")
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True)
-        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        self.camera_object = Camera(play=True, index=0)
+        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.buttons_layout)
@@ -397,8 +397,8 @@ class ScanWindow(Screen):
 
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True)
-        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        self.camera_object = Camera(play=True, index=0)
+        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
@@ -670,8 +670,8 @@ class AddWindow(Screen):
         self.title = Label(text="Получен QR код для оборудования", halign="center")
 
         self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.save_button = MDRectangleFlatButton(text='Сохранить'); self.save_button.bind(on_press = self.save_QR_code, size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.capture_button = MDRectangleFlatButton(text='Сфоткать'); self.capture_button.bind(on_press = partial(self.capture_frame, inventory_number_entry), size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
+        self.save_button = MDRectangleFlatButton(text='Сохранить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.save_button.bind(on_press = self.save_QR_code)
+        self.capture_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.capture_button.bind(on_press = partial(self.capture_frame, inventory_number_entry))
 
         self.footer_layout.add_widget(self.close_button)
         self.footer_layout.add_widget(self.save_button)
@@ -1050,7 +1050,15 @@ class MainWindow(Screen):
 
     def on_enter(self, *args, **kwargs):
         if self.app.excel_to_create and not self.app.excel_created and not self.app.excel_choosen:
-            self.app.excel_df = pd.DataFrame(columns=["Наименование", "Факультет", "Кафедра", "Инвентарный номер", "Ответственный", "Дата принятия", "Кабинет"])
+            empty_dict_with_cols = {"Наименование": [],
+                                    "Факультет": [],
+                                    "Кафедра": [],
+                                    "Инвентарный номер": [],
+                                    "Ответственный": [],
+                                    "Дата принятия": [],
+                                    "Кабинет": []
+                                    }
+            self.app.excel_df = pd.DataFrame(empty_dict_with_cols)
             self.app.excel_df_path = os.path.join(self.app.user_data_dir, "Оборудование кафедры ЭЭО.xls")
             self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
             self.app.excel_created = True
