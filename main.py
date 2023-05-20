@@ -3,7 +3,7 @@ from io import BytesIO
 from datetime import datetime
 
 from kivy.app import App
-from kivy.metrics import dp, cm
+from kivy.metrics import dp
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
@@ -38,12 +38,10 @@ import numpy
 import qrcode
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
-# xlwt in needed for this version of pandas !!!
+# xlwt is needed for this version of pandas !!!
 
 from kivy.utils import platform
 if platform == 'android':
-    import android
-    from android import mActivity
     from android.permissions import request_permissions, Permission
 
 
@@ -1174,13 +1172,6 @@ class Application(MDApp):
     def __init__(self, *args, **kwargs):
         super(Application, self).__init__(*args, **kwargs)
 
-        if platform == 'android':
-            context = mActivity.getApplicationContext()
-            result =  context.getExternalFilesDir(None)   # don't forget the argument
-            if result:
-                storage_path =  str(result.toString())
-                self.user_data_dir = storage_path
-
         self.excel_created = False
         self.excel_choosen = False
         self.excel_to_create = False
@@ -1196,9 +1187,12 @@ class Application(MDApp):
         self.current_item_inv_num = None
 
     def build(self):
+
         if platform == 'android':
             request_permissions([
                 Permission.CAMERA,
+                Permission.WRITE_EXTERNAL_STORAGE,
+                Permission.READ_EXTERNAL_STORAGE
             ])
 
         self.theme_cls.theme_style = "Dark"

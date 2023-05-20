@@ -4,7 +4,7 @@
 title = LaborantHelper
 
 # (str) Package name
-package.name = labhelper
+package.name = LabHelp
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
@@ -37,17 +37,17 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = android,python3,kivy,kivymd,daal,daal4py,odc-geo,hatchling,spyder,pathspec,pyproj,pyqt5,pyqtwebengine,python-dateutil,pytz,sqlite,sqlite3,numpy,pandas,opencv-python,Pillow,qrcode,colorama,pypng,typing-extensions,xlwt
+requirements = android,python3,sqlite3,kivy,docutils,Kivy-Garden,requests,certifi,charset-normalizer,idna,urllib3,pygments,pypiwin32,kivymd,daal4py,daal,hatchling,pathspec,odc-geo,pyproj,spyder,pyqt5,pyqtwebengine,Pillow,numpy,pandas,python-dateutil,six,pytz,opencv-python,qrcode,colorama,pypng,typing-extensions,xlwt,jnius
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
 # requirements.source.kivy = ../../kivy
 
 # (str) Presplash of the application
-#presplash.filename = %(source.dir)s/data/presplash.png
+presplash.filename = ./presplash.png
 
 # (str) Icon of the application
-#icon.filename = %(source.dir)s/data/icon.png
+icon.filename = ./icon.png
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
@@ -64,7 +64,7 @@ orientation = portrait, landscape, portrait-reverse, landscape-reverse
 # author = © Copyright Info
 
 # change the major version of python used by the app
-osx.python_version = 3.9.13
+osx.python_version = 3
 
 # Kivy version to use
 osx.kivy_version = 2.1.0
@@ -95,7 +95,7 @@ fullscreen = 0
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
-android.permissions = CAMERA
+android.permissions = CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
