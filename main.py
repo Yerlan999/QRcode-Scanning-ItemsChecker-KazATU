@@ -43,11 +43,14 @@ from PIL import Image, ImageDraw, ImageFont
 from kivy.utils import platform
 if platform == 'android':
     from android.permissions import request_permissions, Permission
+    from android import mActivity, autoclass, api_version
+    from androidstorage4kivy import SharedStorage, Chooser
+    from android_permissions import AndroidPermissions
 
 
 DEFAUL_IMAGE_SIZE = (300, 300)
 DEFAUL_CAMERA_SIZE = (600, 600)
-BUTTON_TEXT_SIZE = 30
+BUTTON_TEXT_SIZE = 40
 
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
@@ -364,12 +367,11 @@ class CaptureWindow(Screen):
         self.screen_transition("main page")
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True, index=0)
+        self.camera_object = Camera(play=True)
         # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.buttons_layout)
-
 
     def on_leave(self, *args, **kwargs):
         self.camera_object.play = False
@@ -397,7 +399,7 @@ class ScanWindow(Screen):
 
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True, index=0)
+        self.camera_object = Camera(play=True)
         # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         if self.app.scan_with_delete:
@@ -613,10 +615,10 @@ class AddWindow(Screen):
 
     def save_QR_code(self, *args):
         # self.app.excel_df = pd.read_excel(self.app.excel_df_path, dtype={"Инвентарный номер": str, "Кабинет": str})
-        if not os.path.isdir(os.path.join(self.app.user_data_dir, "QR коды")):
-            os.mkdir(os.path.join(self.app.user_data_dir, "QR коды"))
+        if not os.path.isdir(os.path.join(self.app.user_media_dir, "QR коды")):
+            os.mkdir(os.path.join(self.app.user_media_dir, "QR коды"))
 
-        qr_code_image_name = os.path.join(os.path.join(self.app.user_data_dir, "QR коды"), f"{self.inventory_number_entry.text}.png")
+        qr_code_image_name = os.path.join(os.path.join(self.app.user_media_dir, "QR коды"), f"{self.inventory_number_entry.text}.png")
         self.QR_code_core_image.save(qr_code_image_name)
 
         found_indexes = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == self.inventory_number_entry.text].tolist()
@@ -849,7 +851,7 @@ class CheckWindow(Screen, SorterClass):
 
     def finish_checking(self, *args, **kwargs):
         check_df = pd.DataFrame(self.table_content, columns=["Наличие"] + list(self.app.excel_df.columns))
-        check_df.to_excel(os.path.join(self.app.user_data_dir, "Инвентаризация "+str(datetime.today().date())+".xls"), index=False)
+        check_df.to_excel(os.path.join(self.app.user_media_dir, "Инвентаризация "+str(datetime.today().date())+".xls"), index=False)
 
     def on_row_press(self, *args, **kwargs):
         temporal_row_values = self.table_content[int(args[1].index/len(self.column_headers))]
@@ -1059,7 +1061,7 @@ class MainWindow(Screen):
                                     "Кабинет": []
                                     }
             self.app.excel_df = pd.DataFrame(empty_dict_with_cols)
-            self.app.excel_df_path = os.path.join(self.app.user_data_dir, "Оборудование кафедры ЭЭО.xls")
+            self.app.excel_df_path = os.path.join(self.app.user_media_dir, "test.xls") # TESTING !!!
             self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
             self.app.excel_created = True
             self.app.excel_choosen = False
@@ -1166,7 +1168,6 @@ class AboutWindow(Screen):
         layout.add_widget(self.body)
         layout.add_widget(self.home_button)
 
-
         self.add_widget(layout)
 
     def screen_transition(self, to_where, *args):
@@ -1197,10 +1198,18 @@ class Application(MDApp):
     def build(self):
 
         if platform == 'android':
+            if api_version < 29: # Android 9 (API level 28) and below
+                from android.storage import primary_external_storage_path
+                self.user_media_dir = primary_external_storage_path() # only for Android < 10
+            else: # Android 10 (API level 29) and greater
+                from android.storage import primary_external_storage_path
+                self.user_media_dir = primary_external_storage_path() # TEMPORARLY SOLUTION !!!
+
             request_permissions([
                 Permission.CAMERA,
                 Permission.WRITE_EXTERNAL_STORAGE,
-                Permission.READ_EXTERNAL_STORAGE
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.MANAGE_EXTERNAL_STORAGE
             ])
 
         self.theme_cls.theme_style = "Dark"

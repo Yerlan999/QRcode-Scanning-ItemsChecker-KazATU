@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = Учет оборудования ЭЭО
+title = File Chooser Test GUI
 
 # (str) Package name
-package.name = labhelper
+package.name = filechoosertestapp
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
@@ -37,21 +37,21 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = android,androidstorage4kivy,python3,sqlite3,kivy,docutils,Kivy-Garden,requests,certifi,charset-normalizer,idna,urllib3,pygments,pypiwin32,kivymd,daal4py,daal,hatchling,pathspec,odc-geo,pyproj,spyder,pyqt5,pyqtwebengine,Pillow,numpy,pandas,python-dateutil,six,pytz,opencv,qrcode,colorama,pypng,typing-extensions,xlwt,jnius
+requirements = android,python3,kivy,kivymd,androidstorage4kivy,numpy,pandas
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
 # requirements.source.kivy = ../../kivy
 
 # (str) Presplash of the application
-presplash.filename = ./presplash.png
+#presplash.filename = %(source.dir)s/data/presplash.png
 
 # (str) Icon of the application
-icon.filename = ./icon.png
+#icon.filename = %(source.dir)s/data/icon.png
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
-orientation = portrait, landscape, portrait-reverse, landscape-reverse
+orientation = portrait
 
 # (list) List of service to declare
 #services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
@@ -95,7 +95,7 @@ fullscreen = 0
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
-android.permissions = CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, MANAGE_EXTERNAL_STORAGE
+android.permissions = WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, MANAGE_EXTERNAL_STORAGE
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
@@ -110,7 +110,7 @@ android.api = 33
 #android.sdk = 20
 
 # (str) Android NDK version to use
-#android.ndk = 25b
+#android.ndk = 23b
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 #android.ndk_api = 21
@@ -161,7 +161,7 @@ android.api = 33
 # android.apptheme = "@android:style/Theme.NoTitleBar"
 
 # (list) Pattern to whitelist for the whole project
-android.whitelist = sqlite3/*,lib-dynload/_sqlite3.so
+#android.whitelist =
 
 # (str) Path to a custom whitelist file
 #android.whitelist_src =
@@ -290,7 +290,7 @@ android.archs = arm64-v8a
 # android.numeric_version = 1
 
 # (bool) enables Android auto backup feature (Android API >=23)
-# android.allow_backup = False
+android.allow_backup = True
 
 # (str) XML file for custom backup rules (see official auto backup documentation)
 # android.backup_rules =
