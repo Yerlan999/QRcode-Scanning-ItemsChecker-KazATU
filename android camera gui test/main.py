@@ -1,55 +1,44 @@
-# Uncomment these lines to see all the messages
 from kivy.logger import Logger
 import logging
-Logger.setLevel(logging.TRACE)
+Logger.setLevel(logging.DEBUG)
 
 from kivy.app import App
-from kivy.lang import Builder
+from kivy.uix.camera import Camera
+from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
-import time
+from kivy.uix.button import Button
 
 from kivy.utils import platform
 if platform == 'android':
     from android.permissions import request_permissions, Permission
 
 
-Builder.load_string('''
-<CameraClick>:
-    orientation: 'vertical'
-    Camera:
-        id: camera
-        play: False
-    ToggleButton:
-        text: 'Play'
-        on_press: camera.play = not camera.play
-        size_hint_y: None
-        height: '48dp'
-    Button:
-        text: 'Capture'
-        size_hint_y: None
-        height: '48dp'
-        on_press: root.capture()
-''')
+class CamApp(App):
 
+    def launch_camera(self, *args, **kwargs):
+        if self.camera_obj.play:
+            self.camera_obj.play = False
+            self.button.text = "Start"
+            self.camera_obj.texture = None
+        else:
+            self.camera_obj.play = True
+            self.button.text = "Stop"
 
-class CameraClick(BoxLayout):
-    def capture(self):
-        camera = self.ids['camera']
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        camera.export_to_png("IMG_{}.png".format(timestr))
-        print("Captured")
-
-
-class TestCamera(App):
 
     def build(self):
+        self.layout = BoxLayout(orientation="vertical")
+        self.button = Button(text="Start", size_hint=(1, 0.1))
+        self.button.bind(on_release=self.launch_camera)
+
+        self.camera_obj = Camera()
+        self.camera_obj.play = False
+        self.layout.add_widget(self.camera_obj)
+        self.layout.add_widget(self.button)
 
         if platform == 'android':
             request_permissions([
                 Permission.CAMERA,
             ])
+        return self.layout
 
-        return CameraClick()
-
-
-TestCamera().run()
+CamApp().run()

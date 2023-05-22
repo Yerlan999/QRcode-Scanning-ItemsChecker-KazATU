@@ -45,7 +45,6 @@ if platform == 'android':
     from android.permissions import request_permissions, Permission
     from android import mActivity, autoclass, api_version
     from androidstorage4kivy import SharedStorage, Chooser
-    from android_permissions import AndroidPermissions
 
 
 DEFAUL_IMAGE_SIZE = (300, 300)
