@@ -63,13 +63,13 @@ class CameraWindow(Screen):
         self.toggle_camera_button = Button(text='Start camera', size_hint=(1.0, 0.1), font_size=20)
         self.toggle_camera_button.bind(on_press = self.toggle_camera)
 
-        self.camera = Camera(play=False)
+        self.camera = Camera(play=False, resolution=(Window.width, Window.height))
 
         with self.camera.canvas:
             print("Canvas")
         with self.camera.canvas.before:
             PushMatrix()
-            Rotate(angle=90, origin=Window.center)
+            Rotate(angle=-90, origin=Window.center)
             print("Canvas before")
         with self.camera.canvas.after:
             PopMatrix()

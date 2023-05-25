@@ -10,6 +10,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.widget import Widget
 from kivy.uix.camera import Camera
 from kivy.uix.button import Button
+from kivy.core.window import Window
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -20,17 +21,21 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.core.image import Image as CoreImage
+from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
+from kivy.graphics import PushMatrix, PopMatrix, Rotate
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
+from kivy.base import ExceptionManager, ExceptionHandler
 
 # Should be included in requirements (buildozer.spec)
 from kivymd.app import MDApp
+from kivymd.uix.dialog import MDDialog
 from kivymd.uix.pickers import MDDatePicker
-from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.datatables import MDDataTable
+from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.button.button import MDRectangleFlatButton
 
 import cv2
@@ -43,13 +48,22 @@ from PIL import Image, ImageDraw, ImageFont
 from kivy.utils import platform
 if platform == 'android':
     from android.permissions import request_permissions, Permission
-    from android import mActivity, autoclass, api_version
-    from androidstorage4kivy import SharedStorage, Chooser
+    from android import api_version
 
 
 DEFAUL_IMAGE_SIZE = (300, 300)
-DEFAUL_CAMERA_SIZE = (600, 600)
+DEFAUL_CAMERA_SIZE = (480, 640)
 BUTTON_TEXT_SIZE = 40
+
+
+class CrashHandler(ExceptionHandler):
+    def handle_exception(self, inst):
+        self.error_dialog = MDDialog(text=str(inst))
+        self.error_dialog.open()
+        return ExceptionManager.PASS
+
+ExceptionManager.add_handler(CrashHandler())
+
 
 def convert_image_to_bytes(image):
     byteImgIO = io.BytesIO()
@@ -196,40 +210,19 @@ class SorterClass():
 
 
     def sort_on_responsible(self, data):
-        return zip(
-            *sorted(
-                enumerate(data),
-                key=lambda l: l[1][4]
-            )
-        )
+        return zip(*sorted(enumerate(data),key=lambda l: l[1][4]))
+
     def sort_on_data_accepted(self, data):
-        return zip(
-            *sorted(
-                enumerate(data),
-                key=lambda l: l[1][5]
-            )
-        )
+        return zip(*sorted(enumerate(data),key=lambda l: l[1][5]))
+
     def sort_on_room(self, data):
-        return zip(
-            *sorted(
-                enumerate(data),
-                key=lambda l: l[1][6]
-            )
-        )
+        return zip(*sorted(enumerate(data),key=lambda l: l[1][6]))
+
     def sort_on_item_name(self, data):
-        return zip(
-            *sorted(
-                enumerate(data),
-                key=lambda l: l[1][0]
-            )
-        )
+        return zip(*sorted(enumerate(data),key=lambda l: l[1][0]))
+
     def sort_on_inventory_number(self, data):
-        return zip(
-            *sorted(
-                enumerate(data),
-                key=lambda l: l[1][3]
-            )
-        )
+        return zip(*sorted(enumerate(data),key=lambda l: l[1][3]))
 
 
 class IntegerInput(TextInput):
@@ -247,70 +240,63 @@ class IntegerInput(TextInput):
         return super().insert_text(s, from_undo=from_undo)
 
 
-Builder.load_string("""
-<FileChooserWidget>:
-    id: file_chooser
-    MDRectangleFlatButton
-        text: "Выбрать"
-        on_release: file_chooser.open(filechooser.path, filechooser.selection)
-        size_hint: 1.0, 0.1
-        pos_hint: {'right': 1, 'top': 1}
-    FileChooserListView:
-        id: filechooser
-        on_selection: file_chooser.selected(filechooser.selection)
-""")
-
-
-class FileChooserWidget(BoxLayout):
-
-    def __init__(self, parent_screen, app, *args, **kwargs):
+class FileChooserWidget(FileChooserIconView):
+    excel_file_path = None
+    def __init__(self, app, *args, **kwargs):
         super(FileChooserWidget, self).__init__(*args, **kwargs)
-        self.parent_screen = parent_screen
         self.app = app
+        self.path = self.app.user_media_dir
+        self.rootpath = self.app.user_media_dir
 
-    def open(self, path, filename):
-        if (filename) and os.path.splitext(filename[0])[1] in [".xlsx", ".xls"]:
-            excel_df = pd.read_excel(filename[0], dtype={"Инвентарный номер": str, "Кабинет": str})
-            self.app.excel_choosen = True
-            self.app.excel_created = False
-            self.app.excel_to_create = False
-            self.app.excel_df = excel_df
-            self.app.excel_df_path = filename[0]
-            self.parent_screen.screen_transition("main page")
-        elif (filename) and os.path.splitext(filename[0])[1] in [".jpg", ".jpeg", ".png"] and self.app.current_item_inv_num:
-            pillow_image = Image.open(filename[0])
-            image_bytes = convert_image_to_bytes(pillow_image)
-            update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
-            self.app.current_item_inv_num = None
-            self.parent_screen.screen_transition("main page")
-
-
-    def selected(self, filename):
+    def on_selection(self, *args, **kwargs):
         try:
-            self.ids.image.source = filename[0]
-        except:
-            pass
-
+            FileChooserWidget.excel_file_path = args[1][0]
+        except Exception as error:
+            print("Error while selecting...", error)
 
 
 class ChooseWindow(Screen):
 
     def __init__(self, app, *args, **kwargs):
         super(ChooseWindow, self).__init__(*args, **kwargs)
+        self.app = app
 
         layout = BoxLayout(orientation='vertical')
+        buttons_layout = BoxLayout(orientation='horizontal')
 
         self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center', size_hint=(1.0, 0.1))
 
         self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+        self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
+        self.choose_button.bind(on_press = self.choose)
+
+        buttons_layout.add_widget(self.home_button)
+        buttons_layout.add_widget(self.choose_button)
 
         layout.add_widget(self.title)
-        layout.add_widget(FileChooserWidget(self, app))
-        layout.add_widget(self.home_button)
+        layout.add_widget(FileChooserWidget(self.app))
+        layout.add_widget(buttons_layout)
 
 
         self.add_widget(layout)
+
+    def choose(self, *args, **kwargs):
+        if FileChooserWidget.excel_file_path:
+            if os.path.splitext(FileChooserWidget.excel_file_path)[1] in [".xlsx", ".xls"]:
+                excel_df = pd.read_excel(FileChooserWidget.excel_file_path, dtype={"Инвентарный номер": str, "Кабинет": str})
+                self.app.excel_choosen = True
+                self.app.excel_created = False
+                self.app.excel_to_create = False
+                self.app.excel_df = excel_df
+                self.app.excel_df_path = FileChooserWidget.excel_file_path
+                self.screen_transition("main page")
+            elif os.path.splitext(FileChooserWidget.excel_file_path)[1] in [".jpg", ".jpeg", ".png"] and self.app.current_item_inv_num:
+                pillow_image = Image.open(FileChooserWidget.excel_file_path)
+                image_bytes = convert_image_to_bytes(pillow_image)
+                update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
+                self.app.current_item_inv_num = None
+                self.screen_transition("main page")
 
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
@@ -367,7 +353,14 @@ class CaptureWindow(Screen):
 
     def on_enter(self, *args, **kwargs):
         self.camera_object = Camera(play=True)
-        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+
+        with self.camera_object.canvas.before:
+            PushMatrix()
+            Rotate(angle=-90, origin=Window.center)
+        with self.camera_object.canvas.after:
+            PopMatrix()
+
+        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.buttons_layout)
@@ -399,7 +392,14 @@ class ScanWindow(Screen):
 
     def on_enter(self, *args, **kwargs):
         self.camera_object = Camera(play=True)
-        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+
+        with self.camera_object.canvas.before:
+            PushMatrix()
+            Rotate(angle=-90, origin=Window.center)
+        with self.camera_object.canvas.after:
+            PopMatrix()
+
+        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
@@ -1197,12 +1197,13 @@ class Application(MDApp):
     def build(self):
 
         if platform == 'android':
-            if api_version < 29: # Android 9 (API level 28) and below
-                from android.storage import primary_external_storage_path
-                self.user_media_dir = primary_external_storage_path() # only for Android < 10
-            else: # Android 10 (API level 29) and greater
-                from android.storage import primary_external_storage_path
-                self.user_media_dir = primary_external_storage_path() # TEMPORARLY SOLUTION !!!
+            from android.storage import primary_external_storage_path
+            self.user_media_dir = primary_external_storage_path()
+
+            # if api_version < 29: # Android 9 (API level 28) and below
+            #     self.user_media_dir = primary_external_storage_path() # only for Android < 10
+            # else: # Android 10 (API level 29) and greater
+            #     self.user_media_dir = primary_external_storage_path() # for Android >= 10
 
             request_permissions([
                 Permission.CAMERA,
@@ -1210,6 +1211,9 @@ class Application(MDApp):
                 Permission.READ_EXTERNAL_STORAGE,
                 Permission.MANAGE_EXTERNAL_STORAGE
             ])
+
+        else: # Working on Windows OS
+            self.user_media_dir = self.user_data_dir
 
         self.theme_cls.theme_style = "Dark"
 
@@ -1233,3 +1237,4 @@ class Application(MDApp):
 if __name__ == "__main__":
     application = Application()
     application.run()
+
