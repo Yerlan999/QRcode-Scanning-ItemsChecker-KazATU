@@ -1209,7 +1209,6 @@ class Application(MDApp):
                 Permission.CAMERA,
                 Permission.WRITE_EXTERNAL_STORAGE,
                 Permission.READ_EXTERNAL_STORAGE,
-                Permission.MANAGE_EXTERNAL_STORAGE
             ])
 
         else: # Working on Windows OS
