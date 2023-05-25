@@ -13,8 +13,8 @@ from kivy.uix.button import Button
 from kivy.core.window import Window
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.graphics.texture import Texture
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image as kiImage
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.recycleview import RecycleView
@@ -24,13 +24,12 @@ from kivy.core.image import Image as CoreImage
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.graphics import PushMatrix, PopMatrix, Rotate
+from kivy.base import ExceptionManager, ExceptionHandler
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
-from kivy.base import ExceptionManager, ExceptionHandler
 
-# Should be included in requirements (buildozer.spec)
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.pickers import MDDatePicker
@@ -41,9 +40,9 @@ from kivymd.uix.button.button import MDRectangleFlatButton
 import cv2
 import numpy
 import qrcode
-import pandas as pd
+import pandas as pd # + xlwt, xlrd
 from PIL import Image, ImageDraw, ImageFont
-# xlwt is needed for this version of pandas !!!
+
 
 from kivy.utils import platform
 if platform == 'android':
@@ -145,7 +144,7 @@ class SorterClass():
 
     def populate_table(self, use_checks=True, checking_mode=False):
 
-        if checking_mode: # Checking mode
+        if checking_mode:
 
             if not self.table_content:
                 self.table_content = []
@@ -174,7 +173,7 @@ class SorterClass():
                 else:
                     self.column_headers.append((column_name, dp(30)))
 
-        else: # Other modes
+        else:
 
             self.table_content = []
             for index, row in self.app.excel_df.iterrows():
@@ -262,13 +261,13 @@ class ChooseWindow(Screen):
         self.app = app
 
         layout = BoxLayout(orientation='vertical')
-        buttons_layout = BoxLayout(orientation='horizontal')
+        buttons_layout = BoxLayout(orientation='horizontal', size_hint=(1.0, 0.1))
 
         self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center', size_hint=(1.0, 0.1))
 
-        self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
+        self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE)
         self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
-        self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
+        self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE)
         self.choose_button.bind(on_press = self.choose)
 
         buttons_layout.add_widget(self.home_button)
@@ -352,7 +351,8 @@ class CaptureWindow(Screen):
         self.screen_transition("main page")
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True)
+        self.camera_object = Camera()
+        self.camera_object.play = True
 
         with self.camera_object.canvas.before:
             PushMatrix()
@@ -360,7 +360,7 @@ class CaptureWindow(Screen):
         with self.camera_object.canvas.after:
             PopMatrix()
 
-        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.buttons_layout)
@@ -391,7 +391,8 @@ class ScanWindow(Screen):
 
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera(play=True)
+        self.camera_object = Camera()
+        self.camera_object.play = True
 
         with self.camera_object.canvas.before:
             PushMatrix()
@@ -399,7 +400,7 @@ class ScanWindow(Screen):
         with self.camera_object.canvas.after:
             PopMatrix()
 
-        self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
 
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
@@ -613,7 +614,7 @@ class AddWindow(Screen):
         popup.open()
 
     def save_QR_code(self, *args):
-        # self.app.excel_df = pd.read_excel(self.app.excel_df_path, dtype={"Инвентарный номер": str, "Кабинет": str})
+
         if not os.path.isdir(os.path.join(self.app.user_media_dir, "QR коды")):
             os.mkdir(os.path.join(self.app.user_media_dir, "QR коды"))
 
@@ -645,7 +646,6 @@ class AddWindow(Screen):
         item_name_entry = self.item_name_entry.text; faculty_entry = self.faculty_entry.text; department_entry = self.department_entry.text; inventory_number_entry = self.inventory_number_entry.text; responsible_entry = self.responsible_entry.text; date_accepted_entry = self.date_accepted_entry.text; room_entry = self.room_entry.text
         data_to_encode = item_name_entry + "_" + faculty_entry + "_" + department_entry + "_" + inventory_number_entry + "_" + responsible_entry + "_" + date_accepted_entry + "_" + room_entry
 
-        # Создание временного изображения если нет
         current_image = fetch_db_image(inventory_number_entry, self.app.user_data_dir)
         if not current_image:
             temporal_image = Image.new('RGBA', DEFAUL_IMAGE_SIZE, color = (75, 110, 140))
@@ -817,7 +817,6 @@ class CheckWindow(Screen, SorterClass):
         self.finish_button = MDRectangleFlatButton(text='Сохранить и завершить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.finish_button.bind(on_press = self.finish_checking)
 
-        # After scaning by QR code
         if self.app.current_item_QR:
             this_row = None; current_symbol = None;
             for i, row in enumerate(self.table_content):
@@ -913,7 +912,7 @@ class DeleteWindow(Screen, SorterClass):
         self.main_layout.add_widget(self.table_layout)
         self.main_layout.add_widget(self.buttons_layout)
 
-    # !!! NEEDED TO BE CORRECTED SLIGHTLY !!!
+
     def delete_checked_rows(self, *args):
 
         def deselect_rows(*args):
@@ -1060,7 +1059,7 @@ class MainWindow(Screen):
                                     "Кабинет": []
                                     }
             self.app.excel_df = pd.DataFrame(empty_dict_with_cols)
-            self.app.excel_df_path = os.path.join(self.app.user_media_dir, "test.xls") # TESTING !!!
+            self.app.excel_df_path = os.path.join(self.app.user_media_dir, "Оборудование кафедры ЭЭО.xls")
             self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
             self.app.excel_created = True
             self.app.excel_choosen = False
@@ -1200,19 +1199,14 @@ class Application(MDApp):
             from android.storage import primary_external_storage_path
             self.user_media_dir = primary_external_storage_path()
 
-            # if api_version < 29: # Android 9 (API level 28) and below
-            #     self.user_media_dir = primary_external_storage_path() # only for Android < 10
-            # else: # Android 10 (API level 29) and greater
-            #     self.user_media_dir = primary_external_storage_path() # for Android >= 10
-
             request_permissions([
                 Permission.CAMERA,
                 Permission.WRITE_EXTERNAL_STORAGE,
                 Permission.READ_EXTERNAL_STORAGE,
             ])
 
-        else: # Working on Windows OS
-            self.user_media_dir = self.user_data_dir
+        else:
+            self.user_media_dir = "/"
 
         self.theme_cls.theme_style = "Dark"
 
