@@ -33,7 +33,10 @@ class QrScanner(BoxLayout):
             Clock.unschedule(self.read_qr_text, 1)
             self.zbarcam.stop() # stop zbarcam
             print(dir(self.zbarcam.ids['xcamera']._camera))
-            self.zbarcam.ids['xcamera']._camera._device.release() # release camera !!! ERROR no ._device attribute
+            if platform == 'android':
+                self.zbarcam.ids['xcamera']._camera._android_camera.release() # release camera !!! ERROR. AttributeError: 'CameraAndroid' object has no attribute '_device'
+            else:
+                self.zbarcam.ids['xcamera']._camera._device.release() # release camera !!! ERROR. AttributeError: 'CameraAndroid' object has no attribute '_device'
 
 
 
