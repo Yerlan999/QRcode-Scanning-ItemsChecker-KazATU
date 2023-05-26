@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = android,python3,kivy
+requirements = android,python3,kivy,Kivy-Garden,numpy,opencv,Pillow,hostpython3,zbarcam,libiconv,libzbar,pyzbar,xcamera,Sphinx,m2r,sphinx-rtd-theme
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes

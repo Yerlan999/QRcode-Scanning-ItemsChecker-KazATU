@@ -1,115 +1,52 @@
-import time
-from functools import partial
-
-import kivy
 from kivy.app import App
-from kivy.lang import Builder
-from kivy.uix.label import Label
-from kivy.uix.camera import Camera
-from kivy.uix.button import Button
 from kivy.uix.widget import Widget
-from kivy.uix.widget import Widget
-from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
-from kivy.graphics import Rectangle, Color
-from kivy.uix.togglebutton import ToggleButton
-from kivy.graphics import PushMatrix, PopMatrix, Rotate
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.button import Button
+from kivy.clock import Clock
+from kivy_garden.zbarcam import ZBarCam
+
 
 from kivy.utils import platform
 if platform == 'android':
     from android.permissions import request_permissions, Permission
 
-class ScreenManagement(ScreenManager):
-    def __init__(self, *args, **kwargs):
-        super(ScreenManagement, self).__init__(*args, **kwargs)
 
+class QrScanner(BoxLayout):
+    def __init__(self, **kwargs):
+        super(QrScanner, self).__init__(**kwargs)
+        btn1 = Button(text='Scan Me',  font_size="50sp")
+        btn1.bind(on_press=self.callback)
+        self.add_widget(btn1)
 
-class StartUpWindow(Screen):
+    def callback(self, instance):
+        """On click button, initiate zbarcam and schedule text reader"""
+        self.remove_widget(instance) # remove button
+        self.zbarcam = ZBarCam()
+        self.add_widget(self.zbarcam)
+        Clock.schedule_interval(self.read_qr_text, 1)
 
-    def __init__(self, app, **kwargs):
-        super(StartUpWindow, self).__init__(**kwargs)
-        self.app = app
-
-        layout = BoxLayout(orientation='vertical')
-
-        self.title = Label(text="Home page", halign='center', size_hint=(1.0, 0.1))
-        self.camera_button = Button(text='Start camera', size_hint=(1.0, 0.1), font_size=20)
-        self.camera_button.bind(on_press = partial(self.screen_transition, "camera page"))
-
-        layout.add_widget(self.title)
-        layout.add_widget(self.camera_button)
-
-        self.add_widget(layout)
-
-    def screen_transition(self, to_where, *args):
-        self.manager.current = to_where
-
-
-
-class CameraWindow(Screen):
-
-    def __init__(self, app, **kwargs):
-        super(CameraWindow, self).__init__(**kwargs)
-        self.app = app
-
-        layout = BoxLayout(orientation='vertical')
-        buttons_layout = BoxLayout(orientation='horizontal')
-
-        self.title = Label(text="Here is the camera", halign='center', size_hint=(1.0, 0.1))
-        self.home_button = Button(text='to Home', size_hint=(1.0, 0.1), font_size=20)
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
-
-        self.toggle_camera_button = Button(text='Start camera', size_hint=(1.0, 0.1), font_size=20)
-        self.toggle_camera_button.bind(on_press = self.toggle_camera)
-
-        self.camera = Camera(play=False, resolution=(Window.width, Window.height))
-
-        with self.camera.canvas:
-            print("Canvas")
-        with self.camera.canvas.before:
-            PushMatrix()
-            Rotate(angle=-90, origin=Window.center)
-            print("Canvas before")
-        with self.camera.canvas.after:
-            PopMatrix()
-            print("Canvas after")
-
-        layout.add_widget(self.title)
-        layout.add_widget(self.camera)
-        buttons_layout.add_widget(self.home_button)
-        buttons_layout.add_widget(self.toggle_camera_button)
-
-        self.add_widget(layout)
-        self.add_widget(buttons_layout)
-
-
-    def toggle_camera(self, *args, **kwargs):
-        self.camera.play = not self.camera.play
-        self.toggle_camera_button.text = "Stop camera" if self.camera.play else "Start camera"
-
-    def screen_transition(self, to_where, *args):
-        self.manager.current = to_where
+    def read_qr_text(self, *args):
+        """Check if zbarcam.symbols is filled and stop scanning in such case"""
+        if(len(self.zbarcam.symbols) > 0): # when something is detected
+            self.qr_text = self.zbarcam.symbols[0].data # text from QR
+            print(self.qr_text.decode('utf-8'))
+            Clock.unschedule(self.read_qr_text, 1)
+            self.zbarcam.stop() # stop zbarcam
+            print(dir(self.zbarcam.ids['xcamera']._camera))
+            self.zbarcam.ids['xcamera']._camera._device.release() # release camera !!! ERROR no ._device attribute
 
 
 
 
-class Application(App):
-
-    def __init__(self, *args, **kwargs):
-        super(Application, self).__init__(*args, **kwargs)
-
-
+class QrApp(App):
     def build(self):
 
-        sm = ScreenManagement(transition=FadeTransition())
-        sm.add_widget(StartUpWindow(self, name='home page'))
-        sm.add_widget(CameraWindow(self, name='camera page'))
-        return sm
+        if platform == 'android':
+            request_permissions([
+                Permission.CAMERA,
+            ])
 
+        return QrScanner()
 
-
-
-if __name__ == "__main__":
-    application = Application()
-    application.run()
+if __name__ == '__main__':
+    QrApp().run()
