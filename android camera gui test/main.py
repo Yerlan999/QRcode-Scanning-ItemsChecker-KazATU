@@ -2,9 +2,9 @@ from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
+from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy_garden.zbarcam import ZBarCam
-
 
 from kivy.utils import platform
 if platform == 'android':
@@ -14,31 +14,54 @@ if platform == 'android':
 class QrScanner(BoxLayout):
     def __init__(self, **kwargs):
         super(QrScanner, self).__init__(**kwargs)
-        btn1 = Button(text='Scan Me',  font_size="50sp")
-        btn1.bind(on_press=self.callback)
-        self.add_widget(btn1)
+        self.orientation = "vertical"
 
-    def callback(self, instance):
+        self.scan_button = Button(text='Scan Me',  font_size="50sp")
+        self.scan_button.bind(on_press=self.scan_QR_code)
+        self.add_widget(self.scan_button)
+
+        self.capture_button = Button(text='Capture Me',  font_size="50sp")
+        self.capture_button.bind(on_press=self.capture_image)
+        self.add_widget(self.capture_button)
+
+    def scan_QR_code(self, instance):
         """On click button, initiate zbarcam and schedule text reader"""
-        self.remove_widget(instance) # remove button
-        self.zbarcam = ZBarCam()
-        self.add_widget(self.zbarcam)
-        Clock.schedule_interval(self.read_qr_text, 1)
+        self.remove_widget(self.capture_button) # remove button
+        self.remove_widget(self.scan_button) # remove button
+        self.scan_label = Label(text="Scan QR code", size_hint=(1, 0.1))
 
-    def read_qr_text(self, *args):
+        self.zbarcam = ZBarCam()
+
+        self.add_widget(self.scan_label)
+        self.add_widget(self.zbarcam)
+        Clock.schedule_interval(self.read_QR_code, 1)
+
+    def capture_image(self, instance):
+        """On click button, initiate zbarcam and schedule text reader"""
+        self.remove_widget(self.capture_button) # remove button
+        self.remove_widget(self.scan_button) # remove button
+        self.capture_label = Label(text="Scan QR code", size_hint=(1, 0.1))
+
+        self.zbarcam = ZBarCam()
+        self.capture_btn = Button(text="Capture", size_hint=(1, 0.1))
+        self.capture_btn.bind(on_press=self.capture)
+
+        self.add_widget(self.capture_label)
+        self.add_widget(self.zbarcam)
+        self.add_widget(self.capture_btn)
+
+    def read_QR_code(self, *args):
         """Check if zbarcam.symbols is filled and stop scanning in such case"""
         if(len(self.zbarcam.symbols) > 0): # when something is detected
-            self.qr_text = self.zbarcam.symbols[0].data # text from QR
-            print(self.qr_text.decode('utf-8'))
-            Clock.unschedule(self.read_qr_text, 1)
-            self.zbarcam.stop() # stop zbarcam
-            print(dir(self.zbarcam.ids['xcamera']._camera))
-            if platform == 'android':
-                self.zbarcam.ids['xcamera']._camera._android_camera.release() # release camera !!! ERROR. AttributeError: 'CameraAndroid' object has no attribute '_device'
-            else:
-                self.zbarcam.ids['xcamera']._camera._device.release() # release camera !!! ERROR. AttributeError: 'CameraAndroid' object has no attribute '_device'
+            self.qr_text = self.zbarcam.symbols[0].data.decode('utf-8') # text from QR
+            print(self.qr_text)
+            Clock.unschedule(self.read_QR_code, 1)
+            self.zbarcam.stop()
+            if platform == 'android': self.zbarcam.ids['xcamera']._camera._android_camera.release()
+            else: self.zbarcam.ids['xcamera']._camera._device.release()
 
-
+    def capture(self, *args, **kwargs):
+        image_bytes = self.zbarcam.xcamera.texture.pixels
 
 
 class QrApp(App):

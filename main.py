@@ -5,28 +5,19 @@ from datetime import datetime
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.uix.popup import Popup
 from kivy.uix.widget import Widget
-from kivy.uix.camera import Camera
 from kivy.uix.button import Button
 from kivy.core.window import Window
+from kivy_garden.zbarcam import ZBarCam
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics.texture import Texture
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image as kiImage
-from kivy.uix.behaviors import FocusBehavior
-from kivy.uix.recycleview import RecycleView
-from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.core.image import Image as CoreImage
 from kivy.uix.filechooser import FileChooserIconView
-from kivy.uix.recycleboxlayout import RecycleBoxLayout
-from kivy.graphics import PushMatrix, PopMatrix, Rotate
 from kivy.base import ExceptionManager, ExceptionHandler
-from kivy.uix.recycleview.views import RecycleDataViewBehavior
-from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from functools import partial
 
@@ -37,7 +28,6 @@ from kivymd.uix.datatables import MDDataTable
 from kivymd.uix.label import MDLabel as Label
 from kivymd.uix.button.button import MDRectangleFlatButton
 
-import cv2
 import numpy
 import qrcode
 import pandas as pd # + xlwt, xlrd
@@ -47,21 +37,12 @@ from PIL import Image, ImageDraw, ImageFont
 from kivy.utils import platform
 if platform == 'android':
     from android.permissions import request_permissions, Permission
-    from android import api_version
-
+    Window.keyboard_anim_args = {'d': 0.2, 't': 'in_out_expo'}
+    Window.softinput_mode = 'below_target'
 
 DEFAUL_IMAGE_SIZE = (300, 300)
 DEFAUL_CAMERA_SIZE = (480, 640)
 BUTTON_TEXT_SIZE = 40
-
-
-class CrashHandler(ExceptionHandler):
-    def handle_exception(self, inst):
-        self.error_dialog = MDDialog(text=str(inst))
-        self.error_dialog.open()
-        return ExceptionManager.PASS
-
-ExceptionManager.add_handler(CrashHandler())
 
 
 def convert_image_to_bytes(image):
@@ -74,7 +55,7 @@ def convert_image_to_bytes(image):
 
 
 def convert_bytes_to_image(image_bytes):
-    dataBytesIO = io.BytesIO(image_bytes)
+    dataBytesIO = io.BytesIO(bytes(image_bytes))
     image = Image.open(dataBytesIO)
     return image
 
@@ -136,6 +117,27 @@ def fetch_db_image(inventory_number, root_directory):
         connection.close()
     return image_bytes
 
+
+class CrashHandler(ExceptionHandler):
+    def handle_exception(self, inst):
+        self.error_dialog = MDDialog(text=str(inst))
+        self.error_dialog.open()
+        return ExceptionManager.PASS
+
+ExceptionManager.add_handler(CrashHandler())
+
+
+class CameraClass():
+    def __init__(self):
+        self.object = ZBarCam()
+        self.object.stop()
+
+        # if platform == 'android':
+        #     self.camera_object.ids['xcamera']._camera._android_camera.release()
+        # else:
+        #     self.camera_object.ids['xcamera']._camera._device.release()
+
+camera = CameraClass()
 
 class SorterClass():
 
@@ -239,18 +241,44 @@ class IntegerInput(TextInput):
         return super().insert_text(s, from_undo=from_undo)
 
 
-class FileChooserWidget(FileChooserIconView):
+class FileChooserWidget(FileChooserIconView, Screen):
     excel_file_path = None
-    def __init__(self, app, *args, **kwargs):
+
+    def __init__(self, app, parent, *args, **kwargs):
         super(FileChooserWidget, self).__init__(*args, **kwargs)
         self.app = app
+        self.parent = parent
         self.path = self.app.user_media_dir
         self.rootpath = self.app.user_media_dir
+
 
     def on_selection(self, *args, **kwargs):
         try:
             FileChooserWidget.excel_file_path = args[1][0]
+            if os.path.splitext(args[1][0])[1] in [".jpg", ".jpeg", ".png"]:
+
+                self.image_popup_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
+                self.image_buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
+
+                self.image_back_button = MDRectangleFlatButton(text="Закрыть", size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE);
+                self.image_choose_button = MDRectangleFlatButton(text="Выбрать", size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE);
+                # self.image_choose_button.bind(on_release=self.do_something)
+
+                self.image_image = kiImage()
+                self.image_image.source = FileChooserWidget.excel_file_path
+
+                self.image_buttons_layout.add_widget(self.image_back_button)
+                self.image_buttons_layout.add_widget(self.image_choose_button)
+
+                self.image_popup_layout.add_widget(self.image_image)
+                self.image_popup_layout.add_widget(self.image_buttons_layout)
+
+                self.image_popup = Popup(title=os.path.splitext(os.path.basename(FileChooserWidget.excel_file_path))[0], content=self.image_popup_layout, auto_dismiss=True)
+                self.image_back_button.bind(on_release=self.image_popup.dismiss)
+                self.image_popup.open()
+
         except Exception as error:
+            raise Exception(error)
             print("Error while selecting...", error)
 
 
@@ -266,15 +294,15 @@ class ChooseWindow(Screen):
         self.title = Label(text="Укажите путь к excel файлу с оборудованием", halign='center', size_hint=(1.0, 0.1))
 
         self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE)
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+        self.home_button.bind(on_release = partial(self.screen_transition, "home page"))
         self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE)
-        self.choose_button.bind(on_press = self.choose)
+        self.choose_button.bind(on_release = self.choose)
 
         buttons_layout.add_widget(self.home_button)
         buttons_layout.add_widget(self.choose_button)
 
         layout.add_widget(self.title)
-        layout.add_widget(FileChooserWidget(self.app))
+        layout.add_widget(FileChooserWidget(self.app, self))
         layout.add_widget(buttons_layout)
 
 
@@ -291,7 +319,7 @@ class ChooseWindow(Screen):
                 self.app.excel_df_path = FileChooserWidget.excel_file_path
                 self.screen_transition("main page")
             elif os.path.splitext(FileChooserWidget.excel_file_path)[1] in [".jpg", ".jpeg", ".png"] and self.app.current_item_inv_num:
-                pillow_image = Image.open(FileChooserWidget.excel_file_path)
+                pillow_image = Image.open(FileChooserWidget.excel_file_path).convert('RGBA')
                 image_bytes = convert_image_to_bytes(pillow_image)
                 update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
                 self.app.current_item_inv_num = None
@@ -321,10 +349,10 @@ class CaptureWindow(Screen):
         self.title = Label(text="Сфотграфируйте оборудование", halign='center', size_hint=(1.0, 0.1))
 
         self.caputre_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.caputre_button.bind(on_press = self.capture_frame)
+        self.caputre_button.bind(on_release = self.capture_frame)
 
         self.later_button = MDRectangleFlatButton(text='Потом', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.later_button.bind(on_press = self.postpone)
+        self.later_button.bind(on_release = self.postpone)
 
         self.buttons_layout.add_widget(self.caputre_button)
         self.buttons_layout.add_widget(self.later_button)
@@ -334,8 +362,8 @@ class CaptureWindow(Screen):
         self.add_widget(self.layout)
 
     def capture_frame(self, *args, **kwargs):
-        self.camera_object.play = False
-        texture = self.camera_object.texture
+        self.camera_object.stop()
+        texture = self.camera_object.xcamera.texture
         size = texture.size
         pixels = texture.pixels
         pillow_image = Image.frombytes(mode='RGBA', size=size, data=pixels)
@@ -343,31 +371,23 @@ class CaptureWindow(Screen):
         image_bytes = convert_image_to_bytes(pillow_image)
         update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
         self.app.current_item_inv_num = None
+
+
         self.screen_transition("main page")
 
     def postpone(self, *args, **kwargs):
-        self.camera_object.play = False
-        self.camera_object.texture = None
+        self.camera_object.stop()
         self.screen_transition("main page")
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera()
-        self.camera_object.play = True
-
-        with self.camera_object.canvas.before:
-            PushMatrix()
-            Rotate(angle=-90, origin=Window.center)
-        with self.camera_object.canvas.after:
-            PopMatrix()
-
-        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        self.camera_object = camera.object
+        self.camera_object.start()
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.buttons_layout)
 
     def on_leave(self, *args, **kwargs):
-        self.camera_object.play = False
-        self.camera_object.texture = None
+        self.camera_object.stop()
         self.layout.remove_widget(self.camera_object)
         self.layout.remove_widget(self.buttons_layout)
 
@@ -391,32 +411,24 @@ class ScanWindow(Screen):
 
 
     def on_enter(self, *args, **kwargs):
-        self.camera_object = Camera()
-        self.camera_object.play = True
-
-        with self.camera_object.canvas.before:
-            PushMatrix()
-            Rotate(angle=-90, origin=Window.center)
-        with self.camera_object.canvas.after:
-            PopMatrix()
-
-        # self.camera_object.resolution = DEFAUL_CAMERA_SIZE
+        self.camera_object = camera.object
+        self.camera_object.start()
 
         if self.app.scan_with_delete:
             self.title.text = "Подведите камеру к QR коду для удаления оборудования."
             self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-            self.home_button.bind(on_press = partial(self.screen_transition, "delete page"))
+            self.home_button.bind(on_release = partial(self.screen_transition, "delete page"))
         elif self.app.scan_with_update:
             self.title.text = "Подведите камеру к QR коду для обновления оборудования."
             self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-            self.home_button.bind(on_press = partial(self.screen_transition, "update page"))
+            self.home_button.bind(on_release = partial(self.screen_transition, "update page"))
         elif self.app.scan_with_check:
             self.title.text = "Подведите камеру к QR коду для отметки оборудования."
             self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-            self.home_button.bind(on_press = partial(self.screen_transition, "check page"))
+            self.home_button.bind(on_release = partial(self.screen_transition, "check page"))
         else:
             self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-            self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+            self.home_button.bind(on_release = partial(self.screen_transition, "home page"))
 
         self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
 
@@ -427,24 +439,18 @@ class ScanWindow(Screen):
         self.scan_clock = Clock.schedule_interval(self.scan_for_QR_code, 1)
 
     def on_leave(self, *args, **kwargs):
-        self.camera_object.play = False
-        self.camera_object.texture = None
+        self.camera_object.stop()
+
         self.layout.remove_widget(self.camera_object)
         self.layout.remove_widget(self.home_button)
         self.layout.remove_widget(self.data)
         self.title.text = "Подведите камеру к QR коду для прочтения данных"
         self.scan_clock.cancel()
+        Clock.unschedule(self.scan_for_QR_code, 1)
 
-    def read_QR_code(self, image, *args, **kwargs):
-        try:
-            detect = cv2.QRCodeDetector()
-            value, points, straight_qrcode = detect.detectAndDecode(image)
-            return value
-        except Exception as error:
-            print("Error with reading image!", error)
 
     def camera_frame_to_image(self, camera_object, *args, **kwargs):
-        texture = camera_object.texture
+        texture = camera_object.xcamera.texture
         size = texture.size
         pixels = texture.pixels
         pillow_image = Image.frombytes(mode='RGBA', size=size, data=pixels)
@@ -452,32 +458,33 @@ class ScanWindow(Screen):
         return image
 
     def scan_for_QR_code(self, *args):
-        image = self.camera_frame_to_image(self.camera_object)
-        qr_code_value = self.read_QR_code(image)
-        if qr_code_value and len(qr_code_value.split("_")) > 1:
-            item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("_")
-            self.app.current_item_QR = qr_code_value.split("_")
+        if(len(self.camera_object.symbols) > 0):
+            qr_code_value = self.camera_object.symbols[0].data.decode('utf-8')
 
-            indexes_found = None
-            if (self.app.excel_choosen or self.app.excel_created) and self.app.excel_df_path:
-                indexes_found = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == inventory_number_entry].tolist()
+            if qr_code_value and len(qr_code_value.split("_")) > 0:
+                item_name_entry, faculty_entry, department_entry, inventory_number_entry, responsible_entry, date_accepted_entry, room_entry = qr_code_value.split("_")
+                self.app.current_item_QR = qr_code_value.split("_")
 
-            if self.app.scan_with_delete and indexes_found:
-                self.app.excel_df = self.app.excel_df.drop(indexes_found)
-                delete_db_row(self.app.current_item_QR[3], self.app.user_data_dir)
-                self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
-                self.app.scan_with_delete = False
-                self.app.current_item_QR = None
-                self.screen_transition("delete page")
-            elif self.app.scan_with_update and indexes_found:
-                self.screen_transition("add page")
-            elif self.app.scan_with_check and indexes_found:
-                self.screen_transition("check page")
-            if (self.app.scan_with_update or self.app.scan_with_delete) and not indexes_found:
-                qr_code_value = "Данного оборудования нет в excel файле!\n\n" + "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
-            else:
-                qr_code_value = "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
-            self.data.text = qr_code_value
+                indexes_found = None
+                if (self.app.excel_choosen or self.app.excel_created) and self.app.excel_df_path:
+                    indexes_found = self.app.excel_df.index[self.app.excel_df[self.app.excel_df.columns[3]] == inventory_number_entry].tolist()
+
+                if self.app.scan_with_delete and indexes_found:
+                    self.app.excel_df = self.app.excel_df.drop(indexes_found)
+                    delete_db_row(self.app.current_item_QR[3], self.app.user_data_dir)
+                    self.app.excel_df.to_excel(self.app.excel_df_path, index=False)
+                    self.app.scan_with_delete = False
+                    self.app.current_item_QR = None
+                    self.screen_transition("delete page")
+                elif self.app.scan_with_update and indexes_found:
+                    self.screen_transition("add page")
+                elif self.app.scan_with_check and indexes_found:
+                    self.screen_transition("check page")
+                if (self.app.scan_with_update or self.app.scan_with_delete) and not indexes_found:
+                    qr_code_value = "Данного оборудования нет в excel файле!\n\n" + "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
+                else:
+                    qr_code_value = "Наименование: " + item_name_entry + "\nФакультет: " + faculty_entry + "\nКафедра: " + department_entry + "\nИнв. номер: " + inventory_number_entry + "\nОтветственный: " + responsible_entry + "\nДата принятия: " + date_accepted_entry + "\nКабинет: " + room_entry
+                self.data.text = qr_code_value
 
     def screen_transition(self, to_where, *args):
         if to_where in ["main page", "home page"]:
@@ -497,7 +504,7 @@ class AddWindow(Screen):
         self.main_layout = BoxLayout(orientation="vertical")
 
         self.about_button = MDRectangleFlatButton(text='Инструкция', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.about_button.bind(on_press = self.call_about_page)
+        self.about_button.bind(on_release = self.call_about_page)
 
         self.label_entiry_pair_layout1 = BoxLayout(orientation='horizontal')
         self.label_entiry_pair_layout2 = BoxLayout(orientation='horizontal')
@@ -518,7 +525,7 @@ class AddWindow(Screen):
         self.date_accepted_entry.bind(on_touch_down=self.show_date_picker)
 
         self.generate_button = MDRectangleFlatButton(text='Сгенерировать QR код', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.generate_button.bind(on_press = self.show_QR_code)
+        self.generate_button.bind(on_release = self.show_QR_code)
 
         self.label_entiry_pair_layout1.add_widget(self.item_name_label); self.label_entiry_pair_layout1.add_widget(self.item_name_entry);
         self.label_entiry_pair_layout2.add_widget(self.faculty_label); self.label_entiry_pair_layout2.add_widget(self.faculty_entry);
@@ -583,10 +590,10 @@ class AddWindow(Screen):
 
                 self.generate_button.text = "Обновить и сгенерировать QR код"
 
-                self.back_button.bind(on_press = partial(self.screen_transition, "update page"))
+                self.back_button.bind(on_release = partial(self.screen_transition, "update page"))
         else:
             self.generate_button.text = "Сгенерировать QR код"
-            self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+            self.back_button.bind(on_release = partial(self.screen_transition, "main page"))
 
         self.header_layout.add_widget(self.back_button)
         self.header_layout.add_widget(self.about_button)
@@ -609,7 +616,7 @@ class AddWindow(Screen):
         popup_main_layout.add_widget(self.close_button)
 
         popup = Popup(title='Инструкция', content=popup_main_layout, auto_dismiss=False)
-        self.close_button.bind(on_press = popup.dismiss)
+        self.close_button.bind(on_release = popup.dismiss)
 
         popup.open()
 
@@ -665,14 +672,14 @@ class AddWindow(Screen):
         self.QR_code_image = kiImage()
         self.QR_code_image.texture = image.texture
 
-        self.popup_main_layout = BoxLayout(orientation='vertical')
-        self.footer_layout = BoxLayout(orientation='horizontal')
+        self.popup_main_layout = BoxLayout(orientation='vertical', padding=15, spacing=10)
+        self.footer_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.2))
 
-        self.title = Label(text="Получен QR код для оборудования", halign="center")
+        self.title = Label(text="Получен QR код для оборудования", halign="center", size_hint=(1, 0.2))
 
         self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.save_button = MDRectangleFlatButton(text='Сохранить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.save_button.bind(on_press = self.save_QR_code)
-        self.capture_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.capture_button.bind(on_press = partial(self.capture_frame, inventory_number_entry))
+        self.save_button = MDRectangleFlatButton(text='Сохранить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.save_button.bind(on_release = self.save_QR_code)
+        self.capture_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE); self.capture_button.bind(on_release = partial(self.capture_frame, inventory_number_entry))
 
         self.footer_layout.add_widget(self.close_button)
         self.footer_layout.add_widget(self.save_button)
@@ -683,7 +690,7 @@ class AddWindow(Screen):
         self.popup_main_layout.add_widget(self.footer_layout)
 
         self.popup = Popup(title='Ваш QR код', content=self.popup_main_layout, auto_dismiss=False)
-        self.close_button.bind(on_press = self.popup.dismiss)
+        self.close_button.bind(on_release = self.popup.dismiss)
 
         self.popup.open()
 
@@ -710,7 +717,7 @@ class ListWindow(Screen, SorterClass):
         self.title = Label(text="Список оборудовании.", halign='center', size_hint=(1.0, 0.1))
 
         self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+        self.back_button.bind(on_release = partial(self.screen_transition, "main page"))
 
         self.main_layout.add_widget(self.title)
 
@@ -732,28 +739,34 @@ class ListWindow(Screen, SorterClass):
 
         self.app.current_item_inv_num = temporal_row_values[3]
 
-        self.popup_main_layout = BoxLayout(orientation='vertical')
-        self.popup_buttons_layout = BoxLayout(orientation='horizontal')
+        self.popup_main_layout = BoxLayout(orientation='vertical', spacing=10, padding=15)
+        self.popup_buttons_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.2))
 
-        self.title = Label(text=f"Наименование оборудования: {temporal_row_values[0]}.\nИнвентарный номер: {temporal_row_values[3]}", halign="center")
+        self.title = Label(text=f"Наименование оборудования: {temporal_row_values[0]}.\nИнвентарный номер: {temporal_row_values[3]}", halign="center", size_hint=(1, 0.2))
 
         image_bytes = fetch_db_image(temporal_row_values[3], self.app.user_data_dir)
+        if not image_bytes:
+            temporal_image = Image.new('RGBA', DEFAUL_IMAGE_SIZE, color = (75, 110, 140))
+            image_bytes = convert_image_to_bytes(temporal_image)
+            create_db_row(temporal_row_values[3], image_bytes, self.app.user_data_dir)
+            image_bytes = fetch_db_image(temporal_row_values[3], self.app.user_data_dir)
 
         pillow_image = convert_bytes_to_image(image_bytes)
+
         if pillow_image:
             open_cv_image = numpy.array(pillow_image)
             open_cv_image = open_cv_image[:,:,:].copy()
             width, height, _ = open_cv_image.shape
             texture = Texture.create(size=(width, height))
             texture.blit_buffer(numpy.rot90(open_cv_image, 2).flatten(), colorfmt='rgba', bufferfmt='ubyte')
-            image_widget = kiImage(size=(width, height), texture=texture)
+            image_widget = kiImage(size=(width, height), texture=texture, allow_stretch=True, keep_ratio=True)
 
         self.close_button = MDRectangleFlatButton(text='Закрыть', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.select_image_button = MDRectangleFlatButton(text='Указать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
         self.recapture_image_button = MDRectangleFlatButton(text='Сфоткать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.close_button.bind(on_press = self.close_popup)
-        self.select_image_button.bind(on_press = self.select_image)
-        self.recapture_image_button.bind(on_press = self.recapture_image)
+        self.close_button.bind(on_release = self.close_popup)
+        self.select_image_button.bind(on_release = self.select_image)
+        self.recapture_image_button.bind(on_release = self.recapture_image)
 
         self.popup_main_layout.add_widget(self.title)
         self.popup_buttons_layout.add_widget(self.close_button)
@@ -803,7 +816,7 @@ class CheckWindow(Screen, SorterClass):
         self.title = Label(text="Инвентаризация оборудовании", halign='center', size_hint=(1.0, 0.1))
 
         self.check_by_QR_button = MDRectangleFlatButton(text='Отметка по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.check_by_QR_button.bind(on_press = self.check_by_QR_code)
+        self.check_by_QR_button.bind(on_release = self.check_by_QR_code)
 
         self.add_widget(self.main_layout)
 
@@ -812,10 +825,10 @@ class CheckWindow(Screen, SorterClass):
         self.buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1.0, 0.1))
 
         self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+        self.back_button.bind(on_release = partial(self.screen_transition, "main page"))
 
         self.finish_button = MDRectangleFlatButton(text='Сохранить и завершить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.finish_button.bind(on_press = self.finish_checking)
+        self.finish_button.bind(on_release = self.finish_checking)
 
         if self.app.current_item_QR:
             this_row = None; current_symbol = None;
@@ -887,13 +900,13 @@ class DeleteWindow(Screen, SorterClass):
         self.title = Label(text="Удаление оборудовании", halign='center', size_hint=(1.0, 0.1))
 
         self.delete_by_QR_button = MDRectangleFlatButton(text='Удалить по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.delete_by_QR_button.bind(on_press = self.delete_by_QR_code)
+        self.delete_by_QR_button.bind(on_release = self.delete_by_QR_code)
 
         self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+        self.back_button.bind(on_release = partial(self.screen_transition, "main page"))
 
         self.delete_button = MDRectangleFlatButton(text='Удалить', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.delete_button.bind(on_press = self.delete_checked_rows)
+        self.delete_button.bind(on_release = self.delete_checked_rows)
 
         self.add_widget(self.main_layout)
 
@@ -964,10 +977,10 @@ class UpdateWindow(Screen, SorterClass):
         self.title = Label(text="Перемещение/Обновление оборудовании", halign='center', size_hint=(1.0, 0.1))
 
         self.update_by_QR_button = MDRectangleFlatButton(text='Обновить/Переместить по QR коду', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.update_by_QR_button.bind(on_press = self.update_by_QR_code)
+        self.update_by_QR_button.bind(on_release = self.update_by_QR_code)
 
         self.back_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.back_button.bind(on_press = partial(self.screen_transition, "main page"))
+        self.back_button.bind(on_release = partial(self.screen_transition, "main page"))
 
         self.add_widget(self.main_layout)
 
@@ -1017,24 +1030,24 @@ class MainWindow(Screen):
         self.main_layout = BoxLayout(orientation='vertical', spacing=20, padding=30)
 
         self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+        self.home_button.bind(on_release = partial(self.screen_transition, "home page"))
         self.about_button = MDRectangleFlatButton(text='Инструкция', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.about_button.bind(on_press = self.call_about_page)
+        self.about_button.bind(on_release = self.call_about_page)
 
         self.add_button = MDRectangleFlatButton(text='Добавить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.add_button.bind(on_press = partial(self.screen_transition, "add page"))
+        self.add_button.bind(on_release = partial(self.screen_transition, "add page"))
 
         self.update_button = MDRectangleFlatButton(text='Переместить/Обновить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.update_button.bind(on_press = partial(self.screen_transition, "update page"))
+        self.update_button.bind(on_release = partial(self.screen_transition, "update page"))
 
         self.check_button = MDRectangleFlatButton(text='Провести инвентаризацию', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.check_button.bind(on_press = partial(self.screen_transition, "check page"))
+        self.check_button.bind(on_release = partial(self.screen_transition, "check page"))
 
         self.delete_button = MDRectangleFlatButton(text='Удалить оборудование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.delete_button.bind(on_press = partial(self.screen_transition, "delete page"))
+        self.delete_button.bind(on_release = partial(self.screen_transition, "delete page"))
 
         self.look_up_button = MDRectangleFlatButton(text='Просмотр списка оборудовании', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-        self.look_up_button.bind(on_press = partial(self.screen_transition, "list page"))
+        self.look_up_button.bind(on_release = partial(self.screen_transition, "list page"))
 
         self.header_layout.add_widget(self.home_button)
         self.header_layout.add_widget(self.about_button)
@@ -1079,7 +1092,7 @@ class MainWindow(Screen):
         popup_main_layout.add_widget(self.close_button)
 
         popup = Popup(title='Инструкция', content=popup_main_layout, auto_dismiss=False)
-        self.close_button.bind(on_press = popup.dismiss)
+        self.close_button.bind(on_release = popup.dismiss)
 
         popup.open()
 
@@ -1102,16 +1115,16 @@ class StartUpWindow(Screen):
             self.hint = Label(text="Пожалуйста, выберете файл-список оборудовании (excel) или создайте его заново", halign='center', font_style="H6")
 
             self.choose_button = MDRectangleFlatButton(text='Выбрать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-            self.choose_button.bind(on_press = partial(self.screen_transition, "choose page"))
+            self.choose_button.bind(on_release = partial(self.screen_transition, "choose page"))
 
             self.create_button = MDRectangleFlatButton(text='Создать', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-            self.create_button.bind(on_press = self.create_new_excel_file)
+            self.create_button.bind(on_release = self.create_new_excel_file)
 
             self.check_button = MDRectangleFlatButton(text='Проверочное сканирование', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-            self.check_button.bind(on_press = self.just_read_scan)
+            self.check_button.bind(on_release = self.just_read_scan)
 
             self.about_button = MDRectangleFlatButton(text='О программе', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
-            self.about_button.bind(on_press = partial(self.screen_transition, "about page"))
+            self.about_button.bind(on_release = partial(self.screen_transition, "about page"))
 
             self.exit_button = MDRectangleFlatButton(text='Выход', size_hint=(1,1), font_size=BUTTON_TEXT_SIZE)
             self.exit_button.bind(on_release=App.get_running_app().stop)
@@ -1160,7 +1173,7 @@ class AboutWindow(Screen):
         self.title = Label(text="Как пользоваться данной программой.", halign='center', size_hint=(1.0, 0.1))
         self.body = Label(text="<Тут более подробно расписывается инструкция по применению данной программы>.", halign='center', size_hint=(1.0, 0.8))
         self.home_button = MDRectangleFlatButton(text='Домой', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
-        self.home_button.bind(on_press = partial(self.screen_transition, "home page"))
+        self.home_button.bind(on_release = partial(self.screen_transition, "home page"))
 
         layout.add_widget(self.title)
         layout.add_widget(self.body)
@@ -1193,7 +1206,13 @@ class Application(MDApp):
         self.current_item_QR = None
         self.current_item_inv_num = None
 
-    def build(self):
+    def on_pause(self, *args, **kwargs):
+        camera.object.stop()
+
+    def on_resume(self, *args, **kwargs):
+        camera.object.start()
+
+    def build(self, *args, **kwargs):
 
         if platform == 'android':
             from android.storage import primary_external_storage_path
@@ -1206,7 +1225,7 @@ class Application(MDApp):
             ])
 
         else:
-            self.user_media_dir = "/"
+            self.user_media_dir = "/Users/Пользователь/Desktop/"
 
         self.theme_cls.theme_style = "Dark"
 

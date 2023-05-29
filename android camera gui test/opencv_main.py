@@ -5,7 +5,7 @@ from kivy.uix.image import Image
 from kivy.uix.button import Button
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
-
+from kivy.core.window import Window
 
 class OpenCVCamera(Image):
     def __init__(self, capture, **kwargs):
@@ -27,8 +27,8 @@ class MainApp(App):
     def build(self):
         # Initialize the video capture device
         self.capture = cv2.VideoCapture(0)
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, Window.height)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, Window.width)
 
         # Create the layout for the app
         layout = BoxLayout(orientation='vertical')
