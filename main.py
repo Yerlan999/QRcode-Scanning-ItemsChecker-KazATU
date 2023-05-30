@@ -240,29 +240,35 @@ class IntegerInput(TextInput):
             )
         return super().insert_text(s, from_undo=from_undo)
 
+class ParentScreen():
+    object = None
 
-class FileChooserWidget(FileChooserIconView, Screen):
+class FileChooserWidget(FileChooserIconView):
     excel_file_path = None
 
-    def __init__(self, app, parent, *args, **kwargs):
+    def __init__(self, app, *args, **kwargs):
         super(FileChooserWidget, self).__init__(*args, **kwargs)
         self.app = app
-        self.parent = parent
         self.path = self.app.user_media_dir
         self.rootpath = self.app.user_media_dir
+
+
+    def choose_this_image(self, *args, **kwargs):
+        self.image_popup.dismiss()
+        ParentScreen.object.choose()
 
 
     def on_selection(self, *args, **kwargs):
         try:
             FileChooserWidget.excel_file_path = args[1][0]
-            if os.path.splitext(args[1][0])[1] in [".jpg", ".jpeg", ".png"]:
+            if len(os.path.splitext(FileChooserWidget.excel_file_path)) > 1 and os.path.splitext(args[1][0])[1] in [".jpg", ".jpeg", ".png"]:
 
                 self.image_popup_layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
                 self.image_buttons_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
 
                 self.image_back_button = MDRectangleFlatButton(text="Закрыть", size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE);
                 self.image_choose_button = MDRectangleFlatButton(text="Выбрать", size_hint=(1, 1), font_size=BUTTON_TEXT_SIZE);
-                # self.image_choose_button.bind(on_release=self.do_something)
+                self.image_choose_button.bind(on_release=self.choose_this_image)
 
                 self.image_image = kiImage()
                 self.image_image.source = FileChooserWidget.excel_file_path
@@ -278,8 +284,8 @@ class FileChooserWidget(FileChooserIconView, Screen):
                 self.image_popup.open()
 
         except Exception as error:
-            raise Exception(error)
             print("Error while selecting...", error)
+
 
 
 class ChooseWindow(Screen):
@@ -302,7 +308,7 @@ class ChooseWindow(Screen):
         buttons_layout.add_widget(self.choose_button)
 
         layout.add_widget(self.title)
-        layout.add_widget(FileChooserWidget(self.app, self))
+        layout.add_widget(FileChooserWidget(self.app)); ParentScreen.object = self
         layout.add_widget(buttons_layout)
 
 
@@ -323,7 +329,7 @@ class ChooseWindow(Screen):
                 image_bytes = convert_image_to_bytes(pillow_image)
                 update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
                 self.app.current_item_inv_num = None
-                self.screen_transition("main page")
+                self.screen_transition("list page")
 
     def screen_transition(self, to_where, *args):
         self.manager.current = to_where
@@ -372,8 +378,7 @@ class CaptureWindow(Screen):
         update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
         self.app.current_item_inv_num = None
 
-
-        self.screen_transition("main page")
+        self.screen_transition("list page")
 
     def postpone(self, *args, **kwargs):
         self.camera_object.stop()
