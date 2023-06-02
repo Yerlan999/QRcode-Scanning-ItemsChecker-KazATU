@@ -31,7 +31,7 @@ from kivymd.uix.button.button import MDRectangleFlatButton
 import numpy
 import qrcode
 import pandas as pd # + xlwt, xlrd
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 
 from kivy.utils import platform
@@ -326,6 +326,7 @@ class ChooseWindow(Screen):
                 self.screen_transition("main page")
             elif os.path.splitext(FileChooserWidget.excel_file_path)[1] in [".jpg", ".jpeg", ".png"] and self.app.current_item_inv_num:
                 pillow_image = Image.open(FileChooserWidget.excel_file_path).convert('RGBA')
+                pillow_image = ImageOps.mirror(pillow_image)
                 image_bytes = convert_image_to_bytes(pillow_image)
                 update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
                 self.app.current_item_inv_num = None
@@ -373,6 +374,7 @@ class CaptureWindow(Screen):
         size = texture.size
         pixels = texture.pixels
         pillow_image = Image.frombytes(mode='RGBA', size=size, data=pixels)
+        pillow_image = pillow_image.rotate(-90)
 
         image_bytes = convert_image_to_bytes(pillow_image)
         update_db_row(self.app.current_item_inv_num, image_bytes, self.app.user_data_dir)
@@ -406,7 +408,7 @@ class ScanWindow(Screen):
         super(ScanWindow, self).__init__(*args, **kwargs)
         self.app = app
 
-        self.layout = BoxLayout(orientation='vertical')
+        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
         self.title = Label(text="Подведите камеру к QR коду для прочтения данных.", halign='center', size_hint=(1.0, 0.1))
 
@@ -435,7 +437,7 @@ class ScanWindow(Screen):
             self.home_button = MDRectangleFlatButton(text='Назад', size_hint=(1.0, 0.1), font_size=BUTTON_TEXT_SIZE)
             self.home_button.bind(on_release = partial(self.screen_transition, "home page"))
 
-        self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.2))
+        self.data = Label(text="", halign="center", valign="middle", size_hint=(1.0, 0.3))
 
         self.layout.add_widget(self.camera_object)
         self.layout.add_widget(self.data)
@@ -1211,11 +1213,6 @@ class Application(MDApp):
         self.current_item_QR = None
         self.current_item_inv_num = None
 
-    def on_pause(self, *args, **kwargs):
-        camera.object.stop()
-
-    def on_resume(self, *args, **kwargs):
-        camera.object.start()
 
     def build(self, *args, **kwargs):
 
