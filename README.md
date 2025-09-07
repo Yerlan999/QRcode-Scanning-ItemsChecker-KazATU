@@ -1,6 +1,6 @@
-# QRcode-Scanning-ItemsChecker-KazATU
+# QRcode-Scanning-ItemsChecker-KazATU (Android App)
 
-### Description of the App <br/>
+### Description of the Android App <br/>
 
 <table>
   <tr>
