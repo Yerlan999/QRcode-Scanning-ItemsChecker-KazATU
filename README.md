@@ -6,51 +6,51 @@
   <tr>
     <td align="center">
       <img src="Lab helper ScreenShots/App Icon.jfif" width="500"/><br/>
-      <sub>Initail view</sub>
+      <sub>App Icon</sub>
     </td>
     <td align="center">
       <img src="Lab helper ScreenShots/Start page.jfif" width="500"/><br/>
-      <sub>Cells creation</sub>
+      <sub>Start page</sub>
     </td>
   </tr>
 
   <tr>
     <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_3.jpg" width="500"/><br/>
-      <sub>Selecting certain cells</sub>
+      <img src="Lab helper ScreenShots/Main page.jpeg" width="500"/><br/>
+      <sub>Main page</sub>
     </td>
     <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_4.jpg" width="500"/><br/>
-      <sub>Selecting all cells</sub>
-    </td>
-  </tr>
-
-  <tr>
-    <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_5.jpg" width="500"/><br/>
-      <sub>Initail view</sub>
-    </td>
-    <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_2.jpg" width="500"/><br/>
-      <sub>Cells creation</sub>
+      <img src="Lab helper ScreenShots/Adding new equipment.jpeg" width="500"/><br/>
+      <sub>Adding new equipment</sub>
     </td>
   </tr>
 
   <tr>
     <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_5.jpg" width="500"/><br/>
-      <sub>Initail view</sub>
+      <img src="Lab helper ScreenShots/Generated QR code.jfif" width="500"/><br/>
+      <sub>Generated QR code</sub>
     </td>
     <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_2.jpg" width="500"/><br/>
-      <sub>Cells creation</sub>
+      <img src="Lab helper ScreenShots/Generated QR code saved in Gallery.jpeg" width="500"/><br/>
+      <sub>Generated QR code saved in Gallery</sub>
     </td>
   </tr>
 
   <tr>
     <td align="center">
-      <img src="Lab helper ScreenShots/Screenshot_5.jpg" width="500"/><br/>
-      <sub>Initail view</sub>
+      <img src="Lab helper ScreenShots/Generated Excel file.jfif" width="500"/><br/>
+      <sub>Generated Excel file</sub>
+    </td>
+    <td align="center">
+      <img src="Lab helper ScreenShots/List of added equipments.jfif" width="500"/><br/>
+      <sub>List of added equipments</sub>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center">
+      <img src="Lab helper ScreenShots/Scanning QR code.jpeg" width="500"/><br/>
+      <sub>Scanning QR code</sub>
     </td>
   </tr>
 </table>
